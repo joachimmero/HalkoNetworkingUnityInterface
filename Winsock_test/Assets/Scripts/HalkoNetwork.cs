@@ -25,9 +25,9 @@ namespace HalkoNetworking
         private List<HalkoPlayer> instantiationList;
 
         [Header("Client Settings")]
+        public string clientName = "Dummy";
         [SerializeField] GameObject player;
-        [SerializeField] string name = "janne";
-
+        
         [Header("Current room")]
         [SerializeField] string roomName;
         [SerializeField] int maxPlayers;
@@ -46,7 +46,8 @@ namespace HalkoNetworking
             {
                 return;
             }
-            _Send(localPlayer.transform.position);
+            //This is now called from HalkoPlayer
+            //_Send(localPlayer.transform.position);
         }
 
         private void Update()
@@ -55,13 +56,22 @@ namespace HalkoNetworking
             {
                 for (int i = 0; i < instantiationList.Count; i++)
                 {
-                    _InstantiatePlayer(instantiationList[i]);
+                    _InstantiatePlayer(
+                        instantiationList[i].id,
+                        instantiationList[i].clientName,
+                        instantiationList[i].IsLocalPlayer
+                        );
                     instantiationList.RemoveAt(i);
                 }
             }
         }
 
         //Public methods
+
+        public void Send(uint id, Vector3 position)
+        {
+            _Send(id, position);
+        }
 
         public void ConnectToServer()
         {
@@ -94,7 +104,7 @@ namespace HalkoNetworking
         }
 
         //Private methods
-
+        
         private void _Connect(string ip, int port)
         {
             try
@@ -114,7 +124,7 @@ namespace HalkoNetworking
                 //Read the first batch of the TcpServer response bytes.
                 int bytes = stream.Read(data, 0, data.Length);
                 responseData = Encoding.ASCII.GetString(data, 0, bytes);
-            }
+            } 
             catch (SocketException e)
             {
                 print(e.Message);
@@ -127,10 +137,12 @@ namespace HalkoNetworking
             {
                 foreach (HalkoPlayer p in connectedPlayers)
                 {
+                    print(p.id);
                     if (p.id == clientId)
                     {
                         print("Client: " + clientId + ", nextPos: " + nextPos);
                         p.SetNextPosition(nextPos);
+                        break;
                     }
                 }
             }
@@ -205,7 +217,7 @@ namespace HalkoNetworking
             }
         }
 
-        private void _Send(Vector3 pos)
+        private void _Send(uint clientId, Vector3 pos)
         {
             if (client.Connected)
             {
@@ -216,7 +228,7 @@ namespace HalkoNetworking
                     p.pos_y = pos.y;
                     p.pos_z = pos.z;
                     Formatter f = new Formatter();
-                    byte[] id = BitConverter.GetBytes(localPlayer.id);
+                    byte[] id = BitConverter.GetBytes(clientId);
                     byte[] data = f.Serialize(id, (byte)'p', p);
                     //First send the id of the player, who's transform is going to be sent.
                     stream.Write(data, 0, data.Length);
@@ -228,7 +240,7 @@ namespace HalkoNetworking
         private void _CreateRoom(string roomName, int maxPlayers)
         {
             //Length of this clients name-string.
-            int len1 = name.Length;
+            int len1 = clientName.Length;
             //"0" + maxPlayers in characters(1 character) + name.Length + roomName.Length
             int len2 = 2 + len1 + roomName.Length;
 
@@ -238,7 +250,7 @@ namespace HalkoNetworking
             byte[] infoStrm = { strmLen[0], nameLen[0] };
             //Send the size of the next stream to the server.
             stream.Write(infoStrm, 0, 2);
-            byte[] createRoomStrm = Encoding.ASCII.GetBytes("0" + name + roomName + maxPlayers.ToString());
+            byte[] createRoomStrm = Encoding.ASCII.GetBytes("0" + clientName + roomName + maxPlayers.ToString());
             //Send the "Create Room" -stream to the server.
             stream.Write(createRoomStrm, 0, len2);
 
@@ -248,11 +260,11 @@ namespace HalkoNetworking
         private void _OnCreatedRoom(uint playerId)
         {
             print("Room created!");
-            HalkoPlayer n = new HalkoPlayer();
-            n.id = playerId;
-            n.clientName = name;
-            n.IsLocalPlayer = true;
-            _InstantiatePlayer(n);
+            _InstantiatePlayer(
+                playerId,
+                clientName,
+                true
+                );
             connectedToRoom = true;
             _Receive('r');
         }
@@ -260,7 +272,7 @@ namespace HalkoNetworking
         private void _JoinRoom(string roomName)
         {
             //Length of this clients name-string.
-            int len1 = name.Length;
+            int len1 = clientName.Length;
             //"1" + roomName.Length
             int len2 = 1 + len1 + roomName.Length;
             //Length of the "Create Room" -stream to be sent to the server
@@ -269,7 +281,7 @@ namespace HalkoNetworking
             byte[] infoStrm = { strmLen[0], nameLen[0] };
             //Send the size of the next stream to the server.
             stream.Write(infoStrm, 0, 2);
-            byte[] joinRoomStrm = Encoding.ASCII.GetBytes("1" + name + roomName);
+            byte[] joinRoomStrm = Encoding.ASCII.GetBytes("1" + clientName + roomName);
             //Send the "Join Room" -stream to the server.
             stream.Write(joinRoomStrm, 0, len2);
             _Receive('c');
@@ -278,15 +290,13 @@ namespace HalkoNetworking
         private void _OnJoinedRoom(uint playerId)
         {
             print("Room joined!");
+            _InstantiatePlayer(
+                playerId,
+                clientName,
+                true
+                );
 
-            //TODO: Make this neater!
-            HalkoPlayer n = new HalkoPlayer();
-            n.id = playerId;
-            n.clientName = name;
-            n.IsLocalPlayer = true;
-            _InstantiatePlayer(n);
             connectedToRoom = true;
-            //TODO END:
 
             //Receive data about how many players have to be instantiated to the room.
             byte[] data = new byte[4];
@@ -302,13 +312,12 @@ namespace HalkoNetworking
                 int pInfoSize = stream.Read(pInfo, 0, pInfo.Length);
 
                 //Handle the received data and instantiate the appropriate players.
-                HalkoPlayer c = new HalkoPlayer
-                {
-                    id = BitConverter.ToUInt32(pInfo, 0),
-                    clientName = Encoding.ASCII.GetString(pInfo, 4, pInfoSize - 4),
-                    IsLocalPlayer = false
-                };
-                _InstantiatePlayer(c);
+                
+                _InstantiatePlayer(
+                    BitConverter.ToUInt32(pInfo, 0),
+                    Encoding.ASCII.GetString(pInfo, 4, pInfoSize - 4),
+                    false
+                    );
             }
 
             _Receive('r');
@@ -317,22 +326,20 @@ namespace HalkoNetworking
         //Instantiate a player object.
         //If the object is the local player id -> 0
         //Else id is the joined player's id.
-        private void _InstantiatePlayer(HalkoPlayer _n)
+        private void _InstantiatePlayer(uint id, string name, bool IsLocal)
         {
             GameObject g = Instantiate(player);
-            HalkoPlayer n = g.AddComponent<HalkoPlayer>();
-            n.id = _n.id;
-            n.clientName = _n.clientName;
-            g.name = n.clientName;
-            if (_n.IsLocalPlayer)
+            HalkoPlayer h = g.AddComponent<HalkoPlayer>();
+            h.id = id;
+            h.clientName = name;
+            g.name = name;
+            if (IsLocal)
             {
-                n.IsLocalPlayer = true;
-                localPlayer = n;
-                GameObject.Find("localclient").GetComponent<Text>().text = "Local client: " + localPlayer.id;
-                g.AddComponent<Movement>();
-                g.GetComponent<Movement>().h = n;
+                h.IsLocalPlayer = true;
+                GameObject.Find("localclient").GetComponent<Text>().text = "Local client: " + id;
+                g.AddComponent<Movement>().h = h;
             }
-            connectedPlayers.Add(_n);
+            connectedPlayers.Add(h);
         }
     }
 
