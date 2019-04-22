@@ -23,8 +23,11 @@ namespace HalkoNetworking
             }
             set
             {
-                t.position = value;
-                //HalkoNetwork.Send(t.position);
+                if (IsLocalPlayer)
+                {
+                    t.position = value;
+                    //HalkoNetwork.Send(t.position);
+                }
             }
         }
         //This changes the transforms
@@ -36,8 +39,12 @@ namespace HalkoNetworking
             }
             set
             {
-                t.eulerAngles = value;
-                //HalkoNetwork.Send(t.eulerAngles);
+                
+                if(IsLocalPlayer)
+                {
+                    t.eulerAngles = value;
+                    //HalkoNetwork.Send(t.eulerAngles);
+                }
             }
         }
 
@@ -46,12 +53,13 @@ namespace HalkoNetworking
         private Vector3 lastPos = Vector3.zero;
         private Transform t;
         private HalkoNetwork halkoNetwork;
-        [SerializeField] static Vector3 nextPos = Vector3.zero;
+        [SerializeField] Vector3 nextPos = Vector3.zero;
 
 
         // Start is called before the first frame update
         void Start()
         {
+            halkoNetwork = FindObjectOfType<HalkoNetwork>();
             t = GetComponent<Transform>();
         }
 
@@ -62,24 +70,17 @@ namespace HalkoNetworking
             {
                 _Move();
             }
-            else
-            {
-                positionChanged = false;
-                //Check if player has moved during frame change
-                if (lastPos != transform.position)
-                {
-                    positionChanged = true;
-                    lastPos = transform.position;
-                }
-            }
         }
 
         //Public methods:
 
         public void Translate(Vector3 translation)
         {
-            t.Translate(translation);
-            //HalkoNetwork.Send(t.position);
+            if(translation != Vector3.zero && IsLocalPlayer)
+            {
+                t.Translate(translation);
+                halkoNetwork.Send(id, t.position);
+            }
         }
 
         public void SetNextPosition(Vector3 next)
@@ -87,6 +88,8 @@ namespace HalkoNetworking
             nextPos = next;
             print(nextPos);
         }
+
+        //Private methods:
 
         private void _Move()
         {
