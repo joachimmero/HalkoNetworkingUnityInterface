@@ -76,10 +76,11 @@ namespace HalkoNetworking
         public void ConnectToServer()
         {
             string hostName = Dns.GetHostName();
-            string ip = Dns.GetHostAddresses(hostName)[0].ToString();
-            if (ip.ToString() != "192.168.0.157")
+            string ip = Dns.GetHostAddresses(hostName)[1].ToString();
+
+            if (ip.ToString() != "10.206.28.40")
             {
-                ip = "192.168.0.157";
+                ip = "10.206.28.40";
             }
             _Connect(ip, 27015);
         }
@@ -170,7 +171,6 @@ namespace HalkoNetworking
             //Starts continuously receiveing data (Client has joined a room).
             if (flag == 'r')
             {
-                print("boom");
                 Package p = new Package();
                 new Thread(() =>
                 {
