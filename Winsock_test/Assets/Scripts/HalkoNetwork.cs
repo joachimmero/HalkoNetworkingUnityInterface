@@ -111,7 +111,7 @@ namespace HalkoNetworking
         }
         public void CreateRoom()
         {
-            _CreateRoom("testi", 2);
+            _CreateRoom("testi", 1);
         }
 
         public void JoinRoom()
@@ -228,17 +228,40 @@ namespace HalkoNetworking
             //If the client is receiving a callback 'c'
             else if (flag == 'c')
             {
-                byte[] data = new byte[5];
-                int bytes = stream.Read(data, 0, data.Length);
-                string responseData = Encoding.ASCII.GetString(data, 0, bytes);
+                //Read the length of the received data from the stream
+                byte[] datalen = new byte[4];
+                stream.Read(datalen, 0, datalen.Length);
+                uint dataLength = BitConverter.ToUInt32(datalen, 0);
+                print(dataLength);
+                //Read dataLength-bytes from the stream.
+                byte[] data = new byte[dataLength];
+                stream.Read(data, 0, data.Length);
+                //Take the first byte of the data and assign it to be a flag
+                string streamflag = Encoding.ASCII.GetString(data, 0, 1);
 
-                if (responseData.Substring(0, 1) == "c")
+                if (streamflag == "c")
                 {
                     _OnCreatedRoom(BitConverter.ToUInt32(data, 1));
                 }
-                else if (responseData.Substring(0, 1) == "j")
+                else if (streamflag == "j")
                 {
+                    print(Encoding.ASCII.GetString(data, 0, 5));
                     _OnJoinedRoom(BitConverter.ToUInt32(data, 1));
+                }
+                //If the room creation or the joining failed.
+                else if(streamflag == "f")
+                {
+                    //The flag that indicates if the action that failed was room creation or joining.
+                    string failedflag = Encoding.ASCII.GetString(data, 1, 1);
+
+                    if(failedflag == "c")
+                    {
+                        _OnCreateRoomFailed(Encoding.ASCII.GetString(data, 2, (int)dataLength - 2));
+                    }
+                    else if(failedflag== "j")
+                    {
+                        _OnJoinRoomFailed(Encoding.ASCII.GetString(data, 2, (int)dataLength - 2));
+                    }
                 }
             }
         }
@@ -294,6 +317,11 @@ namespace HalkoNetworking
             _Receive('r');
         }
 
+        private void _OnCreateRoomFailed(string msg)
+        {
+            print(msg);
+        }
+
         private void _JoinRoom(string roomName)
         {
             //Length of this clients name-string.
@@ -346,6 +374,11 @@ namespace HalkoNetworking
             }
 
             _Receive('r');
+        }
+        
+        private void _OnJoinRoomFailed(string msg)
+        {
+            print(msg);
         }
 
         //Instantiate a player object.
