@@ -23,6 +23,7 @@ namespace HalkoNetworking
         private static uint newClientId;
         private int mainThreadId;
         private List<HalkoPlayer> instantiationList;
+        private List<uint> leftPlayers;
 
         [Header("Client Settings")]
         public string clientName = "Dummy";
@@ -38,6 +39,7 @@ namespace HalkoNetworking
         {
             mainThreadId = Thread.CurrentThread.ManagedThreadId;
             instantiationList = new List<HalkoPlayer>();
+            leftPlayers = new List<uint>();
         }
 
         private void FixedUpdate()
@@ -46,22 +48,45 @@ namespace HalkoNetworking
             {
                 return;
             }
-            //This is now called from HalkoPlayer
-            //_Send(localPlayer.transform.position);
         }
 
         private void Update()
         {
-            if (Thread.CurrentThread.ManagedThreadId == mainThreadId && instantiationList.Count > 0)
+            if (Thread.CurrentThread.ManagedThreadId == mainThreadId)
             {
-                for (int i = 0; i < instantiationList.Count; i++)
+                if (instantiationList.Count > 0)
                 {
-                    _InstantiatePlayer(
-                        instantiationList[i].id,
-                        instantiationList[i].clientName,
-                        instantiationList[i].IsLocalPlayer
-                        );
-                    instantiationList.RemoveAt(i);
+                    for (int i = 0; i < instantiationList.Count; i++)
+                    {
+                        _InstantiatePlayer(
+                            instantiationList[i].id,
+                            instantiationList[i].clientName,
+                            instantiationList[i].IsLocalPlayer
+                            );
+                        instantiationList.RemoveAt(i);
+                    }
+
+                }
+                if(leftPlayers.Count > 0)
+                {
+                    //Go through all the id's of players that left the room.
+                    for(int i = 0; i < leftPlayers.Count; i++)
+                    {
+                        //Go through all the HalkoPlayers that are connected to the room.
+                        for(int j = 0; j < connectedPlayers.Count; j++)
+                        {
+                            //Check if the id of the HalkoPlayer in index j of connectedPlayers mathes the id of the player that left the room.
+                            if(connectedPlayers[j].id == leftPlayers[i])
+                            {
+                                //Remove the HalkoPlayer who left, from the connectedPlayers list and destroy the gameObject of the player who left.
+                                Destroy(connectedPlayers[j].gameObject);
+                                connectedPlayers.RemoveAt(j);
+                                break;
+                            }
+                        }
+                    }
+                    //Clear the leftPlayers list.
+                    leftPlayers.Clear();
                 }
             }
         }
@@ -151,23 +176,6 @@ namespace HalkoNetworking
 
         private void _Receive(char flag)
         {
-            //If the client is receiving a callback 'c'
-            if (flag == 'c')
-            {
-                byte[] data = new byte[5];
-                int bytes = stream.Read(data, 0, data.Length);
-                string responseData = Encoding.ASCII.GetString(data, 0, bytes);
-
-                if (responseData.Substring(0, 1) == "c")
-                {
-                    _OnCreatedRoom(BitConverter.ToUInt32(data, 1));
-                }
-                else if (responseData.Substring(0, 1) == "j")
-                {
-                    _OnJoinedRoom(BitConverter.ToUInt32(data, 1));
-                }
-            }
-
             //Starts continuously receiveing data (Client has joined a room).
             if (flag == 'r')
             {
@@ -187,8 +195,8 @@ namespace HalkoNetworking
                         //Take the first byte of the data and assign it to be a flag
                         string streamflag = Encoding.ASCII.GetString(data, 0, 1);
 
-                        //If the received stream holds a clients position information.
-                        if (streamflag == "p")
+                        //If the received stream holds a clients transform information.
+                        if (streamflag == "t")
                         {
                             uint clientId = BitConverter.ToUInt32(data, 1);
                             Formatter f = new Formatter();
@@ -210,10 +218,28 @@ namespace HalkoNetworking
                         //If the received stream holds information, that a client has left the room.
                         else if (streamflag == "l")
                         {
-                            //DO SOMETHING
+                            uint leftPlayerId = BitConverter.ToUInt32(data, 1);
+                            leftPlayers.Add(leftPlayerId);
                         }
                     }
                 }).Start();
+            }
+
+            //If the client is receiving a callback 'c'
+            else if (flag == 'c')
+            {
+                byte[] data = new byte[5];
+                int bytes = stream.Read(data, 0, data.Length);
+                string responseData = Encoding.ASCII.GetString(data, 0, bytes);
+
+                if (responseData.Substring(0, 1) == "c")
+                {
+                    _OnCreatedRoom(BitConverter.ToUInt32(data, 1));
+                }
+                else if (responseData.Substring(0, 1) == "j")
+                {
+                    _OnJoinedRoom(BitConverter.ToUInt32(data, 1));
+                }
             }
         }
 
@@ -229,8 +255,7 @@ namespace HalkoNetworking
                     p.pos_z = pos.z;
                     Formatter f = new Formatter();
                     byte[] id = BitConverter.GetBytes(clientId);
-                    byte[] data = f.Serialize(id, (byte)'p', p);
-                    //First send the id of the player, who's transform is going to be sent.
+                    byte[] data = f.Serialize(id, (byte)'t', p);
                     stream.Write(data, 0, data.Length);
                 }
             }
