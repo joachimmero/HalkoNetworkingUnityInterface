@@ -65,7 +65,7 @@ namespace HalkoNetworking
 
         // Update is called once per frame
         void Update()
-        {
+        { 
             if (!IsLocalPlayer && nextPos != Vector3.zero)
             {
                 _Move();
