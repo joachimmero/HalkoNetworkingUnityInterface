@@ -1,39 +1,31 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Net;
 using System.Net.Sockets;
 using UnityEngine;
 using System;
 using System.Text;
-using UnityEngine.UI;
-using System.Threading.Tasks;
 
 namespace HalkoNetworking
 {
     public class HalkoNetwork : MonoBehaviour
     {
 
-        //Public properties:
+        //Public fields:
 
-        public HalkoPlayer LastConnectedPlayer
-        {
-            set
-            {
-                connectedPlayers.Add(value);
-            }
-        }
-        //Private properties
+       
+        //Private fields:
 
         private HalkoClientHandler clientHandler;
         private NetworkStream stream;
         private TcpClient client;
         private bool connectedToRoom = false;
         private static HalkoPlayer localPlayer;
-        private static bool newClientJoined = false;
         private static string newClientName;
         private static uint newClientId;
         private int mainThreadId;
+
+        //Private properties:
         private string _RoomName
         {
             set
@@ -41,6 +33,7 @@ namespace HalkoNetworking
                 roomName = value;
             }
         }
+        //Public properties:
         public string RoomName
         {
             get
@@ -48,11 +41,10 @@ namespace HalkoNetworking
                 return roomName;
             }
         }
-        
+
         [Header("Client Settings")]
         public string clientName = "Dummy";
         public GameObject player;
-        [SerializeField] bool autoSpawnPlayer = true;
         [SerializeField] uint clientId;
 
         [Header("Current room")]
@@ -60,29 +52,7 @@ namespace HalkoNetworking
         [SerializeField] int maxPlayers;
         [SerializeField] List<HalkoPlayer> connectedPlayers;
 
-        // Start is called before the first frame update
-        internal void Start()
-        {
-            print("Start");
-            /*
-            mainThreadId = Thread.CurrentThread.ManagedThreadId;
-            instantiationList = new List<HalkoPlayer>();
-            leftPlayers = new List<uint>();
-            */
-        }
 
-        private void FixedUpdate()
-        {
-            if (client == null || localPlayer == null || !localPlayer.positionChanged)
-            {
-                return;
-            }
-        }
-
-        private void Update()
-        {
-           
-        }
 
         //Public methods
 
@@ -114,10 +84,6 @@ namespace HalkoNetworking
             _JoinRoom(roomName);
         }
 
-        public void InstantiatePlayer(uint id, string name, bool IsLocal)
-        {
-            clientHandler.InstantiatePlayer(id, name, IsLocal);
-        }
         public List<HalkoPlayer> GetCurrentPlayers()
         {
             return connectedPlayers;
@@ -339,6 +305,13 @@ namespace HalkoNetworking
             clientId = playerId;
             connectedToRoom = true;
             _Receive('r');
+
+            connectedPlayers.Add(clientHandler.InstantiatePlayer(
+            clientId,
+            clientName,
+            true
+            ));
+            
             OnCreatedRoom();
         }
 
@@ -362,14 +335,21 @@ namespace HalkoNetworking
 
                 //Handle the received data and instantiate the appropriate players.
 
-                clientHandler.InstantiatePlayer(
+                connectedPlayers.Add(clientHandler.InstantiatePlayer(
                     BitConverter.ToUInt32(pInfo, 0),
                     Encoding.ASCII.GetString(pInfo, 4, pInfoSize - 4),
                     false
-                    );
+                    ));
             }
 
             _Receive('r');
+
+            connectedPlayers.Add(clientHandler.InstantiatePlayer(
+                clientId,
+                clientName,
+                true
+                ));
+
             OnJoinedRoom();
         }
 
@@ -385,14 +365,7 @@ namespace HalkoNetworking
         public virtual void OnCreatedRoom()
         {
             print("Room created");
-            if(autoSpawnPlayer)
-            {
-                clientHandler.InstantiatePlayer(
-                clientId,
-                clientName,
-                true
-                );
-            }
+            
         }
 
         public virtual void OnCreateRoomFailed(string msg)
@@ -403,14 +376,9 @@ namespace HalkoNetworking
         public virtual void OnJoinedRoom()
         {
             print("Room joined");
-            if(autoSpawnPlayer)
-            {
-                clientHandler.InstantiatePlayer(
-                clientId,
-                clientName,
-                true
-                );
-            }
+            
+                
+            
         }
 
         public virtual void OnJoinRoomFailed(string msg)

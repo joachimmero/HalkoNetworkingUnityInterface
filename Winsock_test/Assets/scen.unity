@@ -3247,7 +3247,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   clientName: Dummy
   player: {fileID: 4265145551205093257, guid: dbb51aae5ba9ea545a464973d300b097, type: 3}
-  autoSpawnPlayer: 1
   clientId: 0
   roomName: 
   maxPlayers: 0

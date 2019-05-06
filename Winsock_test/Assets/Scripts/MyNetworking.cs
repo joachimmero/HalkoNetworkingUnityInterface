@@ -26,7 +26,7 @@ public class MyNetworking : HalkoNetwork
     // Update is called once per frame
     void Update()
     {
-
+        print(GetCurrentPlayers().Count);
     }
 
     //Public methods:
@@ -55,22 +55,18 @@ public class MyNetworking : HalkoNetwork
     }
     public override void OnCreatedRoom()
     {
-        base.OnCreatedRoom();
         serverConnection.text = "CONNECTED TO ROOM: " + RoomName;
     }
 
     public override void OnCreateRoomFailed(string msg)
     {
-        base.OnCreateRoomFailed(msg);
     }
 
     public override void OnJoinedRoom()
     {
-        base.OnJoinedRoom();
     }
 
     public override void OnJoinRoomFailed(string msg)
     {
-        base.OnJoinRoomFailed(msg);
     }
 }

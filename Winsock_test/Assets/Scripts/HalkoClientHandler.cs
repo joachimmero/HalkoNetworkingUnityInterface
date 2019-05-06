@@ -77,9 +77,9 @@ namespace HalkoNetworking
 
         //Public methods:
 
-        public void InstantiatePlayer(uint id, string name, bool IsLocal)
+        public HalkoPlayer InstantiatePlayer(uint id, string name, bool IsLocal)
         {
-            _InstantiatePlayer(id, name, IsLocal);
+            return _InstantiatePlayer(id, name, IsLocal);
         }
 
         //Private methods:
@@ -87,7 +87,7 @@ namespace HalkoNetworking
         //Instantiate a player object.
         //If the object is the local player id -> 0
         //Else id is the joined player's id.
-        private void _InstantiatePlayer(uint id, string name, bool IsLocal)
+        private HalkoPlayer _InstantiatePlayer(uint id, string name, bool IsLocal)
         {
             GameObject g = Instantiate(_player);
             HalkoPlayer h = g.AddComponent<HalkoPlayer>();
@@ -100,7 +100,7 @@ namespace HalkoNetworking
                 GameObject.Find("localclient").GetComponent<Text>().text = "Local client: " + id;
                 g.AddComponent<Movement>().h = h;
             }
-            _halkoNetwork.LastConnectedPlayer = h;
+            return h;
         }
     }
 
