@@ -6,27 +6,17 @@ using HalkoNetworking;
 
 public class MyNetworking : HalkoNetwork
 {
+    //Public fields:
+    private MenuScript ms;
 
-    //Public properties:
-    public Text serverConnection;
-    public InputField jNameField;
-    public InputField cNameField;
-    public Dropdown cMaxPlayers;
-    
-    //Private properties:
-
-    // Start is called before the first frame update
-    void Start()
+    private void Start()
     {
-
-        serverConnection.text = "NOT CONNECTED";
-        serverConnection.color = Color.red;
+        ms = FindObjectOfType<MenuScript>();    
     }
 
     // Update is called once per frame
     void Update()
     {
-        print(GetCurrentPlayers().Count);
     }
 
     //Public methods:
@@ -35,27 +25,17 @@ public class MyNetworking : HalkoNetwork
     {
         ConnectToHalko();
     }
-    public void CreateRoom()
-    {
-        CreateRoom(cNameField.text, cMaxPlayers.value + 1);
-    }
-
-    public void JoinRoom()
-    {
-        JoinRoom(jNameField.text);
-    }
 
     //Overrided methods:
 
     public override void OnConnectedToHalko()
     {
         base.OnConnectedToHalko();
-        serverConnection.text = "CONNECTED TO SERVER";
-        serverConnection.color = Color.green;
+        ms.SetConnectionStatus("CONNECTED TO SERVER", Color.green);
     }
     public override void OnCreatedRoom()
     {
-        serverConnection.text = "CONNECTED TO ROOM: " + RoomName;
+       // ms.SetConnectionStatus("CONNECTED TO ROOM: " + RoomName, Color.green);
     }
 
     public override void OnCreateRoomFailed(string msg)

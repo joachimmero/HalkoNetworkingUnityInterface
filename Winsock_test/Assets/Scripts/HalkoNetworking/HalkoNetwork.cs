@@ -1,38 +1,26 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
+using System;
 using System.Threading;
+using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using UnityEngine;
-using System;
-using System.Text;
+using UnityEngine.SceneManagement;
 
 namespace HalkoNetworking
 {
     public class HalkoNetwork : MonoBehaviour
     {
-
-        //Public fields:
-
-       
-        //Private fields:
-
-        private HalkoClientHandler clientHandler;
-        private NetworkStream stream;
-        private TcpClient client;
-        private bool connectedToRoom = false;
-        private static HalkoPlayer localPlayer;
-        private static string newClientName;
-        private static uint newClientId;
-        private int mainThreadId;
-
         //Private properties:
-        private string _RoomName
+        public bool ConnectedToHalko
         {
-            set
+            get
             {
-                roomName = value;
+                return connectedToHalko;
             }
         }
+
         //Public properties:
         public string RoomName
         {
@@ -42,17 +30,38 @@ namespace HalkoNetworking
             }
         }
 
+        //Public fields:
+
+
+        //Private fields:
+
+        private HalkoClientHandler clientHandler;
+        private NetworkStream stream;
+        private TcpClient client;
+        private bool connectedToHalko = false;
+        //private bool connectedToRoom = false;
+        private static HalkoPlayer localPlayer;
+        private static string newClientName;
+        private static uint newClientId;
+        private int mainThreadId;
+
+        [Header("Network Settings")]
+        [SerializeField] string nextScene;
         [Header("Client Settings")]
         public string clientName = "Dummy";
         public GameObject player;
+
         [SerializeField] uint clientId;
 
         [Header("Current room")]
         [SerializeField] string roomName;
         [SerializeField] int maxPlayers;
-        [SerializeField] List<HalkoPlayer> connectedPlayers;
+        public List<HalkoPlayer> connectedPlayers;
 
-
+        private void Awake()
+        {
+            DontDestroyOnLoad(gameObject);
+        }
 
         //Public methods
 
@@ -66,22 +75,65 @@ namespace HalkoNetworking
             string hostName = Dns.GetHostName();
             string ip = Dns.GetHostAddresses(hostName)[1].ToString();
 
-            if (ip.ToString() != "192.168.0.157")
+            if (ip.ToString() != "10.69.10.187")
             {
-                ip = "192.168.0.157";
+                ip = "10.69.10.187";
             }
-            _Connect(ip, 27015);
+            Connect(ip, 27015);
         }
 
-        public void CreateRoom(string roomName, int maxPlayers)
+        public void CreateRoom(string rName, int maxPlayers)
         {
-            _RoomName = roomName;
-            _CreateRoom(roomName, maxPlayers);
+            if(connectedToHalko)
+            {
+                roomName = rName;
+                //Length of this clients name-string.
+                int len1 = clientName.Length;
+                //"0" + maxPlayers in characters(1 character) + name.Length + roomName.Length
+                int len2 = 2 + len1 + roomName.Length;
+
+                //Length of the "Create Room" -stream to be sent to the server
+                byte[] nameLen = BitConverter.GetBytes((uint)len1);
+                byte[] strmLen = BitConverter.GetBytes((uint)len2);
+                byte[] infoStrm = { strmLen[0], nameLen[0] };
+                //Send the size of the next stream to the server.
+                stream.Write(infoStrm, 0, 2);
+                byte[] createRoomStrm = Encoding.ASCII.GetBytes("0" + clientName + roomName + maxPlayers.ToString());
+                //Send the "Create Room" -stream to the server.
+                stream.Write(createRoomStrm, 0, len2);
+
+                this.maxPlayers = maxPlayers;
+                Receive('c');
+            }
+            else
+            {
+                _OnCreateRoomFailed("Can't create a room. This client is not connected to the server...");
+            }
         }
 
         public void JoinRoom(string roomName)
         {
-            _JoinRoom(roomName);
+            if(connectedToHalko)
+            {
+                //Length of this clients name-string.
+                int len1 = clientName.Length;
+                //"1" + roomName.Length
+                int len2 = 1 + len1 + roomName.Length;
+                //Length of the "Create Room" -stream to be sent to the server
+                byte[] nameLen = BitConverter.GetBytes(len1);
+                byte[] strmLen = BitConverter.GetBytes(len2);
+                byte[] infoStrm = { strmLen[0], nameLen[0] };
+                //Send the size of the next stream to the server.
+                stream.Write(infoStrm, 0, 2);
+                byte[] joinRoomStrm = Encoding.ASCII.GetBytes("1" + clientName + roomName);
+                //Send the "Join Room" -stream to the server.
+                stream.Write(joinRoomStrm, 0, len2);
+                Receive('c');
+            }
+            else
+            {
+                _OnJoinRoomFailed("Can't join a room. This client is not connected to the server...");
+            }
         }
 
         public List<HalkoPlayer> GetCurrentPlayers()
@@ -91,11 +143,9 @@ namespace HalkoNetworking
 
         //Private methods
         
-        private void _Connect(string ip, int port)
+        private void Connect(string ip, int port)
         {
-            GameObject g = new GameObject();
-            g.name = "HalkoClientHandler";
-            clientHandler = g.AddComponent<HalkoClientHandler>();
+            clientHandler = this.gameObject.AddComponent<HalkoClientHandler>();
             mainThreadId = Thread.CurrentThread.ManagedThreadId;
             //instantiationList = new List<HalkoPlayer>();
             //leftPlayers = new List<uint>();
@@ -108,7 +158,7 @@ namespace HalkoNetworking
                 //Get a clinet stream for reading and writing 
                 stream = client.GetStream();
 
-                _Receive('c');
+                Receive('c');
                 /*
                 //Buffer to receive the TcpServer.response
                 byte[] data = new byte[512];
@@ -124,6 +174,7 @@ namespace HalkoNetworking
             catch (SocketException e)
             {
                 print(e.Message);
+                _OnFailedToConnectToHalko();
             }
         }
 
@@ -144,7 +195,7 @@ namespace HalkoNetworking
             }
         }
 
-        private void _Receive(char flag)
+        private void Receive(char flag)
         {
             //Starts continuously receiveing data (Client has joined a room).
             if (flag == 'r')
@@ -211,17 +262,20 @@ namespace HalkoNetworking
 
                 if (streamflag == "c")
                 {
-                    _OnCreatedRoom(BitConverter.ToUInt32(data, 1));
+                    clientId = BitConverter.ToUInt32(data, 1);
+                    StartCoroutine(LoadScene(_OnCreatedRoom));
+                    //_OnCreatedRoom(BitConverter.ToUInt32(data, 1));
                 }
                 else if (streamflag == "j")
                 {
-                    print(Encoding.ASCII.GetString(data, 0, 5));
-                    _OnJoinedRoom(BitConverter.ToUInt32(data, 1));
+                    clientId = BitConverter.ToUInt32(data, 1);
+                    StartCoroutine(LoadScene(_OnJoinedRoom));
+                    //_OnJoinedRoom(BitConverter.ToUInt32(data, 1));
                 }
                 //If the client has connected to the server.
                 else if(streamflag == "s")
                 {
-                    OnConnectedToHalko();
+                    _OnConnectedToHalko();
                 }
                 //If the room creation or the joining failed.
                 else if(streamflag == "f")
@@ -229,13 +283,13 @@ namespace HalkoNetworking
                     //The flag that indicates if the action that failed was room creation or joining.
                     string failedflag = Encoding.ASCII.GetString(data, 1, 1);
 
-                    if(failedflag == "c")
+                    if (failedflag == "j")
                     {
-                        OnCreateRoomFailed(Encoding.ASCII.GetString(data, 2, (int)dataLength - 2));
+                        _OnJoinRoomFailed(Encoding.ASCII.GetString(data, 2, (int)dataLength - 2));
                     }
-                    else if(failedflag== "j")
+                    else if (failedflag == "c")
                     {
-                        OnJoinRoomFailed(Encoding.ASCII.GetString(data, 2, (int)dataLength - 2));
+                        _OnCreateRoomFailed(Encoding.ASCII.GetString(data, 2, (int)dataLength - 2));
                     }
                 }
             }
@@ -259,66 +313,56 @@ namespace HalkoNetworking
             }
         }
 
-        //Creates a room with name = roomName and size = maxPlayers
-        private void _CreateRoom(string roomName, int maxPlayers)
+        IEnumerator LoadScene(Func<uint, int> nextFunc)
         {
-            //Length of this clients name-string.
-            int len1 = clientName.Length;
-            //"0" + maxPlayers in characters(1 character) + name.Length + roomName.Length
-            int len2 = 2 + len1 + roomName.Length;
-
-            //Length of the "Create Room" -stream to be sent to the server
-            byte[] nameLen = BitConverter.GetBytes((uint)len1);
-            byte[] strmLen = BitConverter.GetBytes((uint)len2);
-            byte[] infoStrm = { strmLen[0], nameLen[0] };
-            //Send the size of the next stream to the server.
-            stream.Write(infoStrm, 0, 2);
-            byte[] createRoomStrm = Encoding.ASCII.GetBytes("0" + clientName + roomName + maxPlayers.ToString());
-            //Send the "Create Room" -stream to the server.
-            stream.Write(createRoomStrm, 0, len2);
-
-            _Receive('c');
+            AsyncOperation load = SceneManager.LoadSceneAsync(nextScene);
+            while(!load.isDone)
+            {
+                yield return null;
+            }
+            nextFunc(clientId);
         }
+
+        //Callbacks:
 
         
-
-        private void _JoinRoom(string roomName)
+        private void _OnConnectedToHalko()
         {
-            //Length of this clients name-string.
-            int len1 = clientName.Length;
-            //"1" + roomName.Length
-            int len2 = 1 + len1 + roomName.Length;
-            //Length of the "Create Room" -stream to be sent to the server
-            byte[] nameLen = BitConverter.GetBytes(len1);
-            byte[] strmLen = BitConverter.GetBytes(len2);
-            byte[] infoStrm = { strmLen[0], nameLen[0] };
-            //Send the size of the next stream to the server.
-            stream.Write(infoStrm, 0, 2);
-            byte[] joinRoomStrm = Encoding.ASCII.GetBytes("1" + clientName + roomName);
-            //Send the "Join Room" -stream to the server.
-            stream.Write(joinRoomStrm, 0, len2);
-            _Receive('c');
+            print("Connected to the server!");
+            connectedToHalko = true;
+            OnConnectedToHalko();
         }
 
-        private void _OnCreatedRoom(uint playerId)
+        private void _OnFailedToConnectToHalko()
         {
-            clientId = playerId;
-            connectedToRoom = true;
-            _Receive('r');
+            print("Failed to connect to the server...");
+            connectedToHalko = false;
+            OnFailedToConnectToHalko();
+        }
 
-            connectedPlayers.Add(clientHandler.InstantiatePlayer(
+        private int _OnCreatedRoom(uint playerId)
+        {
+            print("Scene index: " + SceneManager.GetActiveScene().buildIndex);
+ //           clientId = playerId;
+            //connectedToRoom = true;
+
+            Receive('r');
+
+            clientHandler.InstantiatePlayer(
             clientId,
             clientName,
             true
-            ));
-            
+            );
+
+            print("Room created!");
             OnCreatedRoom();
+            return 0;
         }
 
-        private void _OnJoinedRoom(uint playerId)
+        private int _OnJoinedRoom(uint playerId)
         {
-            clientId = playerId;
-            connectedToRoom = true;
+           // clientId = playerId;
+            //connectedToRoom = true;
 
             //Receive data about how many players have to be instantiated to the room.
             byte[] data = new byte[4];
@@ -335,55 +379,62 @@ namespace HalkoNetworking
 
                 //Handle the received data and instantiate the appropriate players.
 
-                connectedPlayers.Add(clientHandler.InstantiatePlayer(
+                clientHandler.InstantiatePlayer(
                     BitConverter.ToUInt32(pInfo, 0),
                     Encoding.ASCII.GetString(pInfo, 4, pInfoSize - 4),
                     false
-                    ));
+                    );
             }
 
-            _Receive('r');
+            Receive('r');
 
-            connectedPlayers.Add(clientHandler.InstantiatePlayer(
+            clientHandler.InstantiatePlayer(
                 clientId,
                 clientName,
                 true
-                ));
+                );
 
+            print("Room joined");
             OnJoinedRoom();
+            return 0;
         }
 
-        
+        private void _OnCreateRoomFailed(string msg)
+        {
+            print(msg);
+            OnCreateRoomFailed(msg);
+        }
+
+        private void _OnJoinRoomFailed(string msg)
+        {
+            print(msg);
+            OnJoinRoomFailed(msg);
+        }
 
         //Virtual methods:
 
+        public virtual void OnFailedToConnectToHalko()
+        {
+        }
+
         public virtual void OnConnectedToHalko()
         {
-
         }
 
         public virtual void OnCreatedRoom()
         {
-            print("Room created");
-            
         }
 
         public virtual void OnCreateRoomFailed(string msg)
         {
-            print(msg);
         }
 
         public virtual void OnJoinedRoom()
         {
-            print("Room joined");
-            
-                
-            
         }
 
         public virtual void OnJoinRoomFailed(string msg)
         {
-            print(msg);
         }
 
     }

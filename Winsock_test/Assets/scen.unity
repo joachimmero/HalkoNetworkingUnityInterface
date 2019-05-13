@@ -3245,6 +3245,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b156ad96d3dbbbb4da47b5d6ff5c7774, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  nextScene: {fileID: 102900000, guid: b143f1606fd65374b9015e792ad71c7b, type: 3}
   clientName: Dummy
   player: {fileID: 4265145551205093257, guid: dbb51aae5ba9ea545a464973d300b097, type: 3}
   clientId: 0

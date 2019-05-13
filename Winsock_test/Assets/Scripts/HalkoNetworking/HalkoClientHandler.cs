@@ -7,6 +7,17 @@ namespace HalkoNetworking
 {
     public class HalkoClientHandler : MonoBehaviour
     {
+        //Private fields:
+
+        private HalkoNetwork _halkoNetwork;
+
+        private GameObject _player;
+
+        //Clients that have joined the room, but haven't yet been instantiated for other clients in the room.
+        List<HalkoPlayer> _instantiationList;
+
+        //Clients that have left the room, but haven't yet been destroyed from the other clients.
+        List<uint> _deletionList;
 
         //Public properties:
 
@@ -26,18 +37,6 @@ namespace HalkoNetworking
             }
         }
 
-        //Private properties:
-
-        private HalkoNetwork _halkoNetwork;
-
-        private GameObject _player;
-
-        //Clients that have joined the room, but haven't yet been instantiated for other clients in the room.
-        List<HalkoPlayer> _instantiationList;
-
-        //Clients that have left the room, but haven't yet been destroyed from the other clients.
-        List<uint> _deletionList;
-
         // Start is called before the first frame update
         void Start()
         {
@@ -55,7 +54,7 @@ namespace HalkoNetworking
             {
                 foreach(HalkoPlayer h in _instantiationList)
                 {
-                    _InstantiatePlayer(h.id, h.clientName, h.IsLocalPlayer);
+                    InstantiatePlayer(h.id, h.clientName, h.IsLocalPlayer);
                 }
                 _instantiationList.Clear();
             }
@@ -77,17 +76,10 @@ namespace HalkoNetworking
 
         //Public methods:
 
-        public HalkoPlayer InstantiatePlayer(uint id, string name, bool IsLocal)
-        {
-            return _InstantiatePlayer(id, name, IsLocal);
-        }
-
-        //Private methods:
-
         //Instantiate a player object.
         //If the object is the local player id -> 0
         //Else id is the joined player's id.
-        private HalkoPlayer _InstantiatePlayer(uint id, string name, bool IsLocal)
+        public void InstantiatePlayer(uint id, string name, bool IsLocal)
         {
             GameObject g = Instantiate(_player);
             HalkoPlayer h = g.AddComponent<HalkoPlayer>();
@@ -97,10 +89,9 @@ namespace HalkoNetworking
             if (IsLocal)
             {
                 h.IsLocalPlayer = true;
-                GameObject.Find("localclient").GetComponent<Text>().text = "Local client: " + id;
                 g.AddComponent<Movement>().h = h;
             }
-            return h;
+            _halkoNetwork.connectedPlayers.Add(h);
         }
     }
 
