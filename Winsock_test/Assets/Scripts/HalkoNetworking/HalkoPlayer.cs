@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Net.Sockets;
 using UnityEngine;
 
 namespace HalkoNetworking
@@ -10,9 +9,9 @@ namespace HalkoNetworking
         //Public properties:
 
         [Header("Client Info")]
-        public uint id;
+        public uint clientId;
         public string clientName;
-        public bool IsLocalPlayer; //True if this is the local player's player object.
+        public bool isLocalPlayer; //True if this is the local player's player object.
 
         //This changes the transforms
         public Vector3 Position
@@ -23,7 +22,7 @@ namespace HalkoNetworking
             }
             set
             {
-                if (IsLocalPlayer)
+                if (isLocalPlayer)
                 {
                     t.position = value;
                     //HalkoNetwork.Send(t.position);
@@ -40,7 +39,7 @@ namespace HalkoNetworking
             set
             {
                 
-                if(IsLocalPlayer)
+                if(isLocalPlayer)
                 {
                     t.eulerAngles = value;
                     //HalkoNetwork.Send(t.eulerAngles);
@@ -66,7 +65,7 @@ namespace HalkoNetworking
         // Update is called once per frame
         void Update()
         { 
-            if (!IsLocalPlayer && nextPos != Vector3.zero)
+            if (!isLocalPlayer && nextPos != Vector3.zero)
             {
                 _Move();
             }
@@ -76,17 +75,16 @@ namespace HalkoNetworking
 
         public void Translate(Vector3 translation)
         {
-            if(translation != Vector3.zero && IsLocalPlayer)
+            if(translation != Vector3.zero && isLocalPlayer)
             {
                 t.Translate(translation);
-                halkoNetwork.Send(id, t.position);
+                halkoNetwork.Send(clientId, t.position);
             }
         }
 
         public void SetNextPosition(Vector3 next)
         {
             nextPos = next;
-            print(nextPos);
         }
 
         //Private methods:
@@ -98,4 +96,17 @@ namespace HalkoNetworking
         }
     }
 
+    public struct ClientInfo
+    {
+        public uint clientId;
+        public string clientName;
+        public bool isLocalClient; //True if this is the local player's player object.
+
+        public ClientInfo(uint id, string name, bool isLocal)
+        {
+            clientId = id;
+            clientName = name;
+            isLocalClient = isLocal;
+        }
+    }
 }

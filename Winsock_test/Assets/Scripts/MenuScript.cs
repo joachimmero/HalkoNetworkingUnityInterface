@@ -32,7 +32,7 @@ public class MenuScript : MonoBehaviour
         connectionStatus.color = Color.red;
         myNetworking = FindObjectOfType<MyNetworking>();
         setNameBtn.onClick.AddListener(() => OpenMenu(1));
-        createRoomBtn.onClick.AddListener(() => myNetworking.CreateRoom(createRoomName.text, createMaxPlayers.value - 1));
+        createRoomBtn.onClick.AddListener(() => myNetworking.CreateRoom(createRoomName.text, createMaxPlayers.value + 1));
         joinRoomBtn.onClick.AddListener(() => myNetworking.JoinRoom(joinRoomName.text));
     }
     

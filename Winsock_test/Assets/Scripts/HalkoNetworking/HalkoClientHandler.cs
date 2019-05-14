@@ -1,7 +1,6 @@
-﻿using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using System.Net.Sockets;
 using UnityEngine;
-using UnityEngine.UI;
 
 namespace HalkoNetworking
 {
@@ -14,14 +13,14 @@ namespace HalkoNetworking
         private GameObject _player;
 
         //Clients that have joined the room, but haven't yet been instantiated for other clients in the room.
-        List<HalkoPlayer> _instantiationList;
+        private List<ClientInfo> _instantiationList;
 
         //Clients that have left the room, but haven't yet been destroyed from the other clients.
-        List<uint> _deletionList;
+        private List<uint> _deletionList;
 
         //Public properties:
 
-        public HalkoPlayer LastJoinedPlayer
+        public ClientInfo LastJoinedPlayer
         {
             set
             {
@@ -40,7 +39,7 @@ namespace HalkoNetworking
         // Start is called before the first frame update
         void Start()
         {
-            _instantiationList = new List<HalkoPlayer>();
+            _instantiationList = new List<ClientInfo>();
             _deletionList = new List<uint>();
 
             _halkoNetwork = FindObjectOfType<HalkoNetwork>();
@@ -52,9 +51,10 @@ namespace HalkoNetworking
         {
             if(_instantiationList.Count > 0)
             {
-                foreach(HalkoPlayer h in _instantiationList)
+                for(int i = 0; i < _instantiationList.Count; i++)
                 {
-                    InstantiatePlayer(h.id, h.clientName, h.IsLocalPlayer);
+                    ClientInfo c = _instantiationList[i];
+                    InstantiatePlayer(c.clientId, c.clientName, c.isLocalClient);
                 }
                 _instantiationList.Clear();
             }
@@ -64,7 +64,7 @@ namespace HalkoNetworking
                 {
                     foreach (HalkoPlayer h in FindObjectsOfType<HalkoPlayer>())
                     {
-                        if (id == h.id)
+                        if (id == h.clientId)
                         {
                             Destroy(h.gameObject);
                         }
@@ -83,14 +83,15 @@ namespace HalkoNetworking
         {
             GameObject g = Instantiate(_player);
             HalkoPlayer h = g.AddComponent<HalkoPlayer>();
-            h.id = id;
+            h.clientId = id;
             h.clientName = name;
             g.name = name;
             if (IsLocal)
             {
-                h.IsLocalPlayer = true;
+                h.isLocalPlayer = true;
                 g.AddComponent<Movement>().h = h;
             }
+
             _halkoNetwork.connectedPlayers.Add(h);
         }
     }
