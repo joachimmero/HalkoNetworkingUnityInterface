@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Net.Sockets;
 using UnityEngine;
 
@@ -19,13 +20,13 @@ namespace HalkoNetworking
         {
             get
             {
-                return t.position;
+                return transform.position;
             }
             set
             {
                 if (isLocalPlayer)
                 {
-                    t.position = value;
+                    transform.position = value;
                     //HalkoNetwork.Send(t.position);
                 }
             }
@@ -35,14 +36,14 @@ namespace HalkoNetworking
         {
             get
             {
-                return t.eulerAngles;
+                return transform.eulerAngles;
             }
             set
             {
                 
                 if(isLocalPlayer)
                 {
-                    t.eulerAngles = value;
+                    transform.eulerAngles = value;
                     //HalkoNetwork.Send(t.eulerAngles);
                 }
             }
@@ -50,9 +51,9 @@ namespace HalkoNetworking
 
         //Private properties:
         public bool positionChanged = false;
+        private bool moving = false;
         private Vector3 lastPos = Vector3.zero;
         [SerializeField] Vector3 nextPos = Vector3.zero;
-        private Transform t;
         private TcpClient client;
         private NetworkStream stream;
         private HalkoNetwork halkoNetwork;
@@ -64,15 +65,14 @@ namespace HalkoNetworking
             halkoNetwork = FindObjectOfType<HalkoNetwork>();
             client = halkoNetwork.Client;
             stream = client.GetStream();
-            t = GetComponent<Transform>();
         }
 
         // Update is called once per frame
         void Update()
         { 
-            if (!isLocalPlayer && nextPos != Vector3.zero)
+            if (!isLocalPlayer && nextPos != transform.position && moving != true)
             {
-                _Move();
+                Move();
             }
         }
 
@@ -82,8 +82,11 @@ namespace HalkoNetworking
         {
             if(translation != Vector3.zero && isLocalPlayer)
             {
-                t.Translate(translation);
-                SendTransform();
+                transform.Translate(translation);
+                if(client != null && client.Connected)
+                {
+                    SendTransform();
+                }
             }
         }
 
@@ -96,23 +99,17 @@ namespace HalkoNetworking
 
         private void SendTransform()
         {
-            if (client.Connected)
-            {
-                if (client != null)
-                {
-                    Package p = new Package();
-                    p.pos_x = t.position.x;
-                    p.pos_y = t.position.y;
-                    p.pos_z = t.position.z;
-                    Formatter f = new Formatter();
-                    byte[] id = BitConverter.GetBytes(clientId);
-                    byte[] data = f.Serialize(id, (byte)'t', p);
-                    stream.Write(data, 0, data.Length);
-                }
-            }
+            Package p = new Package();
+            p.pos_x = transform.position.x;
+            p.pos_y = transform.position.y;
+            p.pos_z = transform.position.z;
+            Formatter f = new Formatter();
+            byte[] id = BitConverter.GetBytes(clientId);
+            byte[] data = f.Serialize(id, (byte)'t', p);
+            stream.Write(data, 0, data.Length);
         }
 
-        private void _Move()
+        private void Move()
         {
             transform.position = nextPos;
             nextPos = Vector3.zero;
