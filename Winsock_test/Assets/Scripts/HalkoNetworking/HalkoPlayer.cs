@@ -1,4 +1,5 @@
-﻿using System.Net.Sockets;
+﻿using System;
+using System.Net.Sockets;
 using UnityEngine;
 
 namespace HalkoNetworking
@@ -50,15 +51,19 @@ namespace HalkoNetworking
         //Private properties:
         public bool positionChanged = false;
         private Vector3 lastPos = Vector3.zero;
-        private Transform t;
-        private HalkoNetwork halkoNetwork;
         [SerializeField] Vector3 nextPos = Vector3.zero;
+        private Transform t;
+        private TcpClient client;
+        private NetworkStream stream;
+        private HalkoNetwork halkoNetwork;
 
 
         // Start is called before the first frame update
         void Start()
         {
             halkoNetwork = FindObjectOfType<HalkoNetwork>();
+            client = halkoNetwork.Client;
+            stream = client.GetStream();
             t = GetComponent<Transform>();
         }
 
@@ -78,7 +83,7 @@ namespace HalkoNetworking
             if(translation != Vector3.zero && isLocalPlayer)
             {
                 t.Translate(translation);
-                halkoNetwork.Send(clientId, t.position);
+                SendTransform();
             }
         }
 
@@ -88,6 +93,24 @@ namespace HalkoNetworking
         }
 
         //Private methods:
+
+        private void SendTransform()
+        {
+            if (client.Connected)
+            {
+                if (client != null)
+                {
+                    Package p = new Package();
+                    p.pos_x = t.position.x;
+                    p.pos_y = t.position.y;
+                    p.pos_z = t.position.z;
+                    Formatter f = new Formatter();
+                    byte[] id = BitConverter.GetBytes(clientId);
+                    byte[] data = f.Serialize(id, (byte)'t', p);
+                    stream.Write(data, 0, data.Length);
+                }
+            }
+        }
 
         private void _Move()
         {

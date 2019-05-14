@@ -12,7 +12,7 @@ namespace HalkoNetworking
 {
     public class HalkoNetwork : MonoBehaviour
     {
-        //Private properties:
+        //Public properties:
         public bool ConnectedToHalko
         {
             get
@@ -21,7 +21,6 @@ namespace HalkoNetworking
             }
         }
 
-        //Public properties:
         public string RoomName
         {
             get
@@ -30,14 +29,24 @@ namespace HalkoNetworking
             }
         }
 
+        public TcpClient Client
+        {
+            get
+            {
+                return client;
+            }
+        }
+
+        //Public fields:
+
         //Private fields:
         private uint clientId;
         private int mainThreadId;
         private bool connectedToHalko = false;
         //private bool connectedToRoom = false;
         private List<ClientInfo> clients;
-        private NetworkStream stream;
         private TcpClient client;
+        private NetworkStream stream;
         private HalkoClientHandler clientHandler;
 
 
@@ -60,11 +69,6 @@ namespace HalkoNetworking
         }
 
         //Public methods
-
-        public void Send(uint id, Vector3 position)
-        {
-            _Send(id, position);
-        }
 
         public void ConnectToHalko()
         {
@@ -284,25 +288,6 @@ namespace HalkoNetworking
                 }
             }
         }
-
-        private void _Send(uint clientId, Vector3 pos)
-        {
-            if (client.Connected)
-            {
-                if (client != null)
-                {
-                    Package p = new Package();
-                    p.pos_x = pos.x;
-                    p.pos_y = pos.y;
-                    p.pos_z = pos.z;
-                    Formatter f = new Formatter();
-                    byte[] id = BitConverter.GetBytes(clientId);
-                    byte[] data = f.Serialize(id, (byte)'t', p);
-                    stream.Write(data, 0, data.Length);
-                }
-            }
-        }
-
         /// <summary>
         /// Spawns every HalkoPlayer that is in the connectedPlayers-list.
         /// </summary>
