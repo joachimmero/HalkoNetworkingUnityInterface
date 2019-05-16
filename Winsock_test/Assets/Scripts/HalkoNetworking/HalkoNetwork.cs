@@ -89,18 +89,37 @@ namespace HalkoNetworking
                 roomName = rName;
                 //Length of this clients name-string.
                 int len1 = clientName.Length;
-                //"0" + maxPlayers in characters(1 character) + name.Length + roomName.Length
-                int len2 = 2 + len1 + roomName.Length;
+                //"0" + maxPlayers in characters(1 character) + nameLen (uint) in bytes + name.Length + roomName.Length
+                int len2 = 6 + len1 + rName.Length;
 
                 //Length of the "Create Room" -stream to be sent to the server
-                byte[] nameLen = BitConverter.GetBytes((uint)len1);
                 byte[] strmLen = BitConverter.GetBytes((uint)len2);
-                byte[] infoStrm = { strmLen[0], nameLen[0] };
                 //Send the size of the next stream to the server.
-                stream.Write(infoStrm, 0, 2);
-                byte[] createRoomStrm = Encoding.ASCII.GetBytes("0" + clientName + roomName + maxPlayers.ToString());
-                //Send the "Create Room" -stream to the server.
-                stream.Write(createRoomStrm, 0, len2);
+                stream.Write(strmLen, 0, 4);
+
+                //Create an array that holds the length of the clients name in bytes.
+                byte[] nameLen = BitConverter.GetBytes((uint)len1);
+
+                //Create an empty buffer for the stream to be sent.
+                byte[] createRoomBuf = new byte[50];
+                
+                //Insert the "Create Room" -flag to the buffer
+                createRoomBuf[0] = (byte)'0';
+                //Insert the length of this clients name to the buffer.
+                createRoomBuf[1] = nameLen[0];
+                createRoomBuf[2] = nameLen[1];
+                createRoomBuf[3] = nameLen[2];
+                createRoomBuf[4] = nameLen[3];
+                
+                //Create a array that holds the rest of the info needed in the buffer
+                byte[] rest = Encoding.ASCII.GetBytes(clientName + rName + maxPlayers.ToString());
+                //Add the rest of the info to the buffer
+                for (int i = 0; i < rest.Length; i++)
+                {
+                    createRoomBuf[5 + i] = rest[i];
+                }
+                //Send the "Create Room" -buffer to the server.
+                stream.Write(createRoomBuf, 0, len2);
 
                 this.maxPlayers = maxPlayers;
                 Receive('c');
@@ -111,24 +130,65 @@ namespace HalkoNetworking
             }
         }
 
-        public void JoinRoom(string roomName)
+        public void JoinRoom(string rName)
         {
             if(connectedToHalko)
             {
+                roomName = rName;
+                //Length of this clients name-string.
+                int len1 = clientName.Length;
+                //"1" + nameLen (uint) in bytes + name.Length + roomName.Length
+                int len2 = 5 + len1 + rName.Length;
+
+                //Length of the "Create Room" -stream to be sent to the server
+                byte[] strmLen = BitConverter.GetBytes((uint)len2);
+                //Send the size of the next stream to the server.
+                stream.Write(strmLen, 0, 4);
+
+                //Create an array that holds the length of the clients name in bytes.
+                byte[] nameLen = BitConverter.GetBytes((uint)len1);
+
+                //Create an empty buffer for the stream to be sent.
+                byte[] joinRoomBuf = new byte[50];
+
+                //Insert the "Join Room" -flag to the buffer
+                joinRoomBuf[0] = (byte)'1';
+                //Insert the length of this clients name to the buffer.
+                joinRoomBuf[1] = nameLen[0];
+                joinRoomBuf[2] = nameLen[1];
+                joinRoomBuf[3] = nameLen[2];
+                joinRoomBuf[4] = nameLen[3];
+
+                //Create a array that holds the rest of the info needed in the buffer
+                byte[] rest = Encoding.ASCII.GetBytes(clientName + rName);
+                //Add the rest of the info to the buffer
+                for (int i = 0; i < rest.Length; ++i)
+                {
+                    joinRoomBuf[5 + i] = rest[i];
+                }
+                //Send the "Create Room" -buffer to the server.
+                stream.Write(joinRoomBuf, 0, len2);
+
+                Receive('c');
+                /*
                 //Length of this clients name-string.
                 int len1 = clientName.Length;
                 //"1" + roomName.Length
                 int len2 = 1 + len1 + roomName.Length;
                 //Length of the "Create Room" -stream to be sent to the server
-                byte[] nameLen = BitConverter.GetBytes(len1);
                 byte[] strmLen = BitConverter.GetBytes(len2);
-                byte[] infoStrm = { strmLen[0], nameLen[0] };
+                byte[] nameLen = BitConverter.GetBytes(len1);
                 //Send the size of the next stream to the server.
-                stream.Write(infoStrm, 0, 2);
+                stream.Write(strmLen, 0, 4);
+
                 byte[] joinRoomStrm = Encoding.ASCII.GetBytes("1" + clientName + roomName);
                 //Send the "Join Room" -stream to the server.
                 stream.Write(joinRoomStrm, 0, len2);
+
+                //Send the size of the players name to the server.
+                stream.Write(nameLen, 0, 4);
                 Receive('c');
+                */
             }
             else
             {
@@ -139,6 +199,46 @@ namespace HalkoNetworking
         public List<HalkoPlayer> GetCurrentPlayers()
         {
             return connectedPlayers;
+        }
+
+        public List<Room> GetRooms()
+        {
+            //Send the size of the buffer to the server
+            stream.Write(BitConverter.GetBytes((uint)1), 0, 4);
+
+            //Send the info that you want to receive a list of all the rooms on the server.
+            stream.Write(Encoding.ASCII.GetBytes("2"), 0, 1);
+
+            //Create a list where the rooms can be stored.
+            List<Room> rooms = new List<Room>();
+
+            //Read data about how many rooms are on the server.
+            byte[] data = new byte[4];
+            stream.Read(data, 0, 4);
+            uint roomsCount = BitConverter.ToUInt32(data, 0);
+            print("Room count: " + roomsCount);
+            
+            //Read roomsCount of times info about a room on the server.
+            for(int i = (int)roomsCount - 1; i >= 0; --i)
+            {
+                byte[] lenBuf = new byte[4];
+                stream.Read(lenBuf, 0, 4);
+                uint namelen = BitConverter.ToUInt32(lenBuf, 0);
+                byte[] roomData = new byte[namelen + 8];
+                stream.Read(roomData, 0, roomData.Length);
+
+                uint playersInRoom = BitConverter.ToUInt32(roomData, 0);
+                uint maxPlayers = BitConverter.ToUInt32(roomData, 4);
+                string roomName = Encoding.ASCII.GetString(roomData, 8, (int)namelen);
+
+                rooms.Add(new Room(
+                    roomName,
+                    playersInRoom,
+                    maxPlayers
+                    ));
+            }
+            
+            return rooms;
         }
 
         //Private methods

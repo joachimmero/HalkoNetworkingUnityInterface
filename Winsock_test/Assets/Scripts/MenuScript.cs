@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.UI;
 
 public class MenuScript : MonoBehaviour
@@ -8,6 +9,7 @@ public class MenuScript : MonoBehaviour
     [SerializeField] Button setNameBtn;
     [SerializeField] Button createRoomBtn;
     [SerializeField] Button joinRoomBtn;
+    [SerializeField] Button FetchRoomsBtn;
 
     [Header("Input Fields")]
     [SerializeField] InputField playerNameField;
@@ -34,6 +36,7 @@ public class MenuScript : MonoBehaviour
         setNameBtn.onClick.AddListener(() => OpenMenu(1));
         createRoomBtn.onClick.AddListener(() => myNetworking.CreateRoom(createRoomName.text, createMaxPlayers.value + 1));
         joinRoomBtn.onClick.AddListener(() => myNetworking.JoinRoom(joinRoomName.text));
+        FetchRoomsBtn.onClick.AddListener(() => FetchRooms());
     }
     
     //Public methods:
@@ -44,6 +47,16 @@ public class MenuScript : MonoBehaviour
     }
 
     //Private methods:
+
+    private void FetchRooms()
+    {
+        List<Room> rooms = myNetworking.GetRooms();
+        for(int i = rooms.Count - 1; i >= 0; --i)
+        {
+            print("Room name: " + rooms[i].roomName + ", Players in room: " + rooms[i].playerCount + ", Max players: " + rooms[i].maxPlayers);
+        }
+    }
+
     private void OpenMenu(int index)
     {
         if(index == 1 && playerNameField.text == "")

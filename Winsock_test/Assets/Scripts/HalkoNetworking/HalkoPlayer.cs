@@ -70,7 +70,7 @@ namespace HalkoNetworking
         // Update is called once per frame
         void Update()
         { 
-            if (!isLocalPlayer && nextPos != transform.position && moving != true)
+            if (positionChanged && !isLocalPlayer && nextPos != transform.position)
             {
                 Move();
             }
@@ -92,6 +92,7 @@ namespace HalkoNetworking
 
         public void SetNextPosition(Vector3 next)
         {
+            positionChanged = true;
             nextPos = next;
         }
 
@@ -112,7 +113,7 @@ namespace HalkoNetworking
         private void Move()
         {
             transform.position = nextPos;
-            nextPos = Vector3.zero;
+            positionChanged = false;
         }
     }
 
