@@ -16,7 +16,7 @@ namespace HalkoNetworking
         public bool isLocalPlayer; //True if this is the local player's player object.
 
         //This changes the transforms
-        public Vector3 Position
+        public Vector3 position
         {
             get
             {
@@ -24,15 +24,15 @@ namespace HalkoNetworking
             }
             set
             {
-                if (isLocalPlayer)
+                if (isLocalPlayer && value != transform.position)
                 {
                     transform.position = value;
-                    //HalkoNetwork.Send(t.position);
+                    transformChanged = true;
                 }
             }
         }
         //This changes the transforms
-        public Vector3 EulerAngles
+        public Vector3 eulerAngles
         {
             get
             {
@@ -41,19 +41,20 @@ namespace HalkoNetworking
             set
             {
                 
-                if(isLocalPlayer)
+                if(isLocalPlayer && value != transform.eulerAngles)
                 {
                     transform.eulerAngles = value;
-                    //HalkoNetwork.Send(t.eulerAngles);
+                    transformChanged = true;
                 }
             }
         }
 
         //Private properties:
-        public bool positionChanged = false;
+        public bool transformChanged = false; //bool for checking if the transform has changed.
         private bool moving = false;
         private Vector3 lastPos = Vector3.zero;
-        [SerializeField] Vector3 nextPos = Vector3.zero;
+        private Vector3 nextPosition = Vector3.zero;
+        private Vector3 nextRotation = Vector3.zero;
         private TcpClient client;
         private NetworkStream stream;
         private HalkoNetwork halkoNetwork;
@@ -70,9 +71,22 @@ namespace HalkoNetworking
         // Update is called once per frame
         void Update()
         { 
-            if (positionChanged && !isLocalPlayer && nextPos != transform.position)
+            //Move the remote client if the local client has moved.
+            if (transformChanged && !isLocalPlayer)
             {
-                Move();
+                SetTransform();
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if(transformChanged && isLocalPlayer)
+            {
+                if (client != null && client.Connected)
+                {
+                    SendTransform();
+                    transformChanged = false;
+                }
             }
         }
 
@@ -83,37 +97,49 @@ namespace HalkoNetworking
             if(translation != Vector3.zero && isLocalPlayer)
             {
                 transform.Translate(translation);
-                if(client != null && client.Connected)
-                {
-                    SendTransform();
-                }
+                transformChanged = true;
             }
         }
 
-        public void SetNextPosition(Vector3 next)
+        public void Rotate(Vector3 rotation)
         {
-            positionChanged = true;
-            nextPos = next;
+            if(rotation != Vector3.zero && isLocalPlayer)
+            {
+                transform.Rotate(rotation);
+                transformChanged = true;
+            }
+        }
+
+        public void SetTransformProperties(Vector3 nextPos, Vector3 nextRot)
+        {
+            transformChanged = true;
+            nextPosition = nextPos;
+            nextRotation = nextRot;
         }
 
         //Private methods:
 
         private void SendTransform()
         {
+            print("Sending transform");
             Package p = new Package();
             p.pos_x = transform.position.x;
             p.pos_y = transform.position.y;
             p.pos_z = transform.position.z;
+            p.rot_x = transform.eulerAngles.x;
+            p.rot_y = transform.eulerAngles.y;
+            p.rot_z = transform.eulerAngles.z;
             Formatter f = new Formatter();
             byte[] id = BitConverter.GetBytes(clientId);
             byte[] data = f.Serialize(id, (byte)'t', p);
             stream.Write(data, 0, data.Length);
         }
 
-        private void Move()
+        private void SetTransform()
         {
-            transform.position = nextPos;
-            positionChanged = false;
+            transform.position = nextPosition;
+            transform.eulerAngles = nextRotation;
+            transformChanged = false;
         }
     }
 

@@ -6,9 +6,13 @@ namespace HalkoNetworking
 {
     public class HalkoClientHandler : MonoBehaviour
     {
+        //Public fields:
+
+        public List<HalkoPlayer> connectedPlayers;
+
         //Private fields:
 
-        private HalkoNetwork _halkoNetwork;
+        public HalkoNetwork _halkoNetwork;
 
         private GameObject _player;
 
@@ -41,6 +45,7 @@ namespace HalkoNetworking
         {
             _instantiationList = new List<ClientInfo>();
             _deletionList = new List<uint>();
+            connectedPlayers = new List<HalkoPlayer>();
 
             _halkoNetwork = FindObjectOfType<HalkoNetwork>();
             _player = _halkoNetwork.player;
@@ -62,11 +67,13 @@ namespace HalkoNetworking
             {
                 foreach (uint id in _deletionList)
                 {
-                    foreach (HalkoPlayer h in FindObjectsOfType<HalkoPlayer>())
+                    foreach (HalkoPlayer h in connectedPlayers)
                     {
                         if (id == h.clientId)
                         {
+                            connectedPlayers.Remove(h);
                             Destroy(h.gameObject);
+                            break;
                         }
                     }
                 }
@@ -79,20 +86,18 @@ namespace HalkoNetworking
         //Instantiate a player object.
         //If the object is the local player id -> 0
         //Else id is the joined player's id.
-        public void InstantiatePlayer(uint id, string name, bool IsLocal)
+        public HalkoPlayer InstantiatePlayer(uint id, string name, bool IsLocal)
         {
             GameObject g = Instantiate(_player);
             HalkoPlayer h = g.AddComponent<HalkoPlayer>();
             h.clientId = id;
             h.clientName = name;
+            h.isLocalPlayer = IsLocal;
             g.name = name;
-            if (IsLocal)
-            {
-                h.isLocalPlayer = true;
-                g.AddComponent<Movement>().h = h;
-            }
 
-            _halkoNetwork.connectedPlayers.Add(h);
+            connectedPlayers.Add(h);
+
+            return h;
         }
     }
 

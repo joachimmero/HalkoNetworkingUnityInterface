@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+
 public class MenuScript : MonoBehaviour
 {
     //Private properties:
@@ -10,6 +11,7 @@ public class MenuScript : MonoBehaviour
     [SerializeField] Button createRoomBtn;
     [SerializeField] Button joinRoomBtn;
     [SerializeField] Button FetchRoomsBtn;
+    [SerializeField] Button leaveRoomBtn;
 
     [Header("Input Fields")]
     [SerializeField] InputField playerNameField;
@@ -30,15 +32,18 @@ public class MenuScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
+        DontDestroyOnLoad(this);
         connectionStatus.text = "NOT CONNECTED";
         connectionStatus.color = Color.red;
         myNetworking = FindObjectOfType<MyNetworking>();
-        setNameBtn.onClick.AddListener(() => OpenMenu(1));
-        createRoomBtn.onClick.AddListener(() => myNetworking.CreateRoom(createRoomName.text, createMaxPlayers.value + 1));
-        joinRoomBtn.onClick.AddListener(() => myNetworking.JoinRoom(joinRoomName.text));
+        setNameBtn.onClick.AddListener(() => SetNameBtnClicked());
+        createRoomBtn.onClick.AddListener(() => CreateRoomBtnClicked());
+        joinRoomBtn.onClick.AddListener(() => JoinRoomBtnClicked());
         FetchRoomsBtn.onClick.AddListener(() => FetchRooms());
+        leaveRoomBtn.onClick.AddListener(() => LeaveRoomBtnClicked());
+
     }
-    
+
     //Public methods:
     public void SetConnectionStatus(string text, Color color)
     {
@@ -46,39 +51,47 @@ public class MenuScript : MonoBehaviour
         connectionStatus.color = color;
     }
 
+    public void OpenMenu(int index)
+    {
+        for (int i = 0; i < menus.Length; i++)
+        {
+            menus[i].SetActive(false);
+        }
+        menus[index].SetActive(true);
+    }
     //Private methods:
 
+    private void SetNameBtnClicked()
+    {
+        if (playerNameField.text != "")
+        {
+            myNetworking.clientName = playerNameField.text;
+            myNetworking.ConnectToHalko();
+            OpenMenu(1);
+        }
+    }
+    private void CreateRoomBtnClicked()
+    {
+        myNetworking.CreateRoom(createRoomName.text, createMaxPlayers.value + 1);
+        OpenMenu(2);
+    }
+    private void JoinRoomBtnClicked()
+    {
+        myNetworking.JoinRoom(joinRoomName.text);
+        OpenMenu(2);
+    }
+    private void LeaveRoomBtnClicked()
+    {
+        print("clicked");
+        myNetworking.LeaveRoom();
+    }
+    
     private void FetchRooms()
     {
         List<Room> rooms = myNetworking.GetRooms();
         for(int i = rooms.Count - 1; i >= 0; --i)
         {
             print("Room name: " + rooms[i].roomName + ", Players in room: " + rooms[i].playerCount + ", Max players: " + rooms[i].maxPlayers);
-        }
-    }
-
-    private void OpenMenu(int index)
-    {
-        if(index == 1 && playerNameField.text == "")
-        {
-            return;
-        }
-        else
-        {
-            myNetworking.clientName = playerNameField.text;
-            myNetworking.ConnectToHalko();
-        }
-
-        for (int i = 0; i < menus.Length; i++)
-        {
-            if(index != i)
-            {
-                menus[i].SetActive(false);
-            }
-            else
-            {
-                menus[i].SetActive(true);
-            }
         }
     }
 }

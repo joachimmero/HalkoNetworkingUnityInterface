@@ -21,14 +21,6 @@ namespace HalkoNetworking
             }
         }
 
-        public string RoomName
-        {
-            get
-            {
-                return roomName;
-            }
-        }
-
         public TcpClient Client
         {
             get
@@ -43,26 +35,22 @@ namespace HalkoNetworking
         private uint clientId;
         private int mainThreadId;
         private bool connectedToHalko = false;
-        //private bool connectedToRoom = false;
         private List<ClientInfo> clients;
         private TcpClient client;
         private NetworkStream stream;
         private HalkoClientHandler clientHandler;
 
+        [SerializeField] bool connectedToRoom = false;
+        [SerializeField] HalkoPlayer localPlayer;
 
         [Header("Network Settings")]
+        [SerializeField] string offlineScene;
         [SerializeField] string nextScene;
 
         [Header("Client Settings")]
         public string clientName = "Dummy";
         public GameObject player;
-
-        [Header("Current room")]
-        [SerializeField] string roomName;
-        [SerializeField] int maxPlayers;
-        public List<HalkoPlayer> connectedPlayers;
-
-
+        
         private void Awake()
         {
             DontDestroyOnLoad(gameObject);
@@ -75,18 +63,17 @@ namespace HalkoNetworking
             string hostName = Dns.GetHostName();
             string ip = Dns.GetHostAddresses(hostName)[1].ToString();
 
-            if (ip.ToString() != "10.206.4.60")
+            if (ip.ToString() != "10.206.28.223")
             {
-                ip = "10.206.4.60";
+                ip = "10.206.28.223";
             }
             Connect(ip, 27015);
         }
 
         public void CreateRoom(string rName, int maxPlayers)
         {
-            if(connectedToHalko)
+            if(connectedToHalko && !connectedToRoom)
             {
-                roomName = rName;
                 //Length of this clients name-string.
                 int len1 = clientName.Length;
                 //"0" + maxPlayers in characters(1 character) + nameLen (uint) in bytes + name.Length + roomName.Length
@@ -104,7 +91,7 @@ namespace HalkoNetworking
                 byte[] createRoomBuf = new byte[50];
                 
                 //Insert the "Create Room" -flag to the buffer
-                createRoomBuf[0] = (byte)'0';
+                createRoomBuf[0] = (byte)'c';
                 //Insert the length of this clients name to the buffer.
                 createRoomBuf[1] = nameLen[0];
                 createRoomBuf[2] = nameLen[1];
@@ -121,7 +108,6 @@ namespace HalkoNetworking
                 //Send the "Create Room" -buffer to the server.
                 stream.Write(createRoomBuf, 0, len2);
 
-                this.maxPlayers = maxPlayers;
                 Receive('c');
             }
             else
@@ -132,9 +118,8 @@ namespace HalkoNetworking
 
         public void JoinRoom(string rName)
         {
-            if(connectedToHalko)
+            if(connectedToHalko && !connectedToRoom)
             {
-                roomName = rName;
                 //Length of this clients name-string.
                 int len1 = clientName.Length;
                 //"1" + nameLen (uint) in bytes + name.Length + roomName.Length
@@ -152,7 +137,7 @@ namespace HalkoNetworking
                 byte[] joinRoomBuf = new byte[50];
 
                 //Insert the "Join Room" -flag to the buffer
-                joinRoomBuf[0] = (byte)'1';
+                joinRoomBuf[0] = (byte)'j';
                 //Insert the length of this clients name to the buffer.
                 joinRoomBuf[1] = nameLen[0];
                 joinRoomBuf[2] = nameLen[1];
@@ -170,25 +155,6 @@ namespace HalkoNetworking
                 stream.Write(joinRoomBuf, 0, len2);
 
                 Receive('c');
-                /*
-                //Length of this clients name-string.
-                int len1 = clientName.Length;
-                //"1" + roomName.Length
-                int len2 = 1 + len1 + roomName.Length;
-                //Length of the "Create Room" -stream to be sent to the server
-                byte[] strmLen = BitConverter.GetBytes(len2);
-                byte[] nameLen = BitConverter.GetBytes(len1);
-                //Send the size of the next stream to the server.
-                stream.Write(strmLen, 0, 4);
-
-                byte[] joinRoomStrm = Encoding.ASCII.GetBytes("1" + clientName + roomName);
-                //Send the "Join Room" -stream to the server.
-                stream.Write(joinRoomStrm, 0, len2);
-
-                //Send the size of the players name to the server.
-                stream.Write(nameLen, 0, 4);
-                Receive('c');
-                */
             }
             else
             {
@@ -196,9 +162,34 @@ namespace HalkoNetworking
             }
         }
 
+        public void LeaveRoom()
+        {
+            if(connectedToRoom)
+            {
+                //Send the server a stream that indicates, that a client left the server
+                //intentionally.
+                byte[] buf = { (byte)'l' };
+                stream.Write(buf, 0, 1);
+
+                byte[] callback = new byte[1];
+                //Read a callback from the server.
+                stream.Read(callback, 0, 1);
+                //Check that the callback indicates that the player has succesfully left the room.
+                if (callback[0] == (byte)'l')
+                {
+                    _OnLeftRoom();
+                }
+                
+            }
+            else
+            {
+                print("Client is not connected to any room.");
+            }
+        }
+
         public List<HalkoPlayer> GetCurrentPlayers()
         {
-            return connectedPlayers;
+            return clientHandler.connectedPlayers;
         }
 
         public List<Room> GetRooms()
@@ -207,7 +198,7 @@ namespace HalkoNetworking
             stream.Write(BitConverter.GetBytes((uint)1), 0, 4);
 
             //Send the info that you want to receive a list of all the rooms on the server.
-            stream.Write(Encoding.ASCII.GetBytes("2"), 0, 1);
+            stream.Write(Encoding.ASCII.GetBytes("g"), 0, 1);
 
             //Create a list where the rooms can be stored.
             List<Room> rooms = new List<Room>();
@@ -280,15 +271,15 @@ namespace HalkoNetworking
             }
         }
 
-        private void MoveNonLocalClient(uint clientId, Vector3 nextPos)
+        private void SetRemoteClientTransform(uint clientId, Vector3 nextPos, Vector3 nextRot)
         {
             if (client.Connected)
             {
-                for (int i = 0; i < connectedPlayers.Count; i++)
+                for (int i = 0; i < clientHandler.connectedPlayers.Count; i++)
                 {
-                    if(connectedPlayers[i].clientId == clientId)
+                    if(clientHandler.connectedPlayers[i].clientId == clientId)
                     {
-                        connectedPlayers[i].SetNextPosition(nextPos);
+                        clientHandler.connectedPlayers[i].SetTransformProperties(nextPos, nextRot);
                         break;
                     }
                 }
@@ -300,19 +291,21 @@ namespace HalkoNetworking
             //Starts continuously receiveing data (Client has joined a room).
             if (flag == 'r')
             {
+                Formatter f = new Formatter();
                 Package p = new Package();
                 new Thread(() =>
                 {
-                    while (client.Connected)
+                    NetworkStream s = client.GetStream();
+                    while (connectedToRoom)
                     {
                         //Read the length of the received data from the stream
                         byte[] datalen = new byte[4];
-                        stream.Read(datalen, 0, datalen.Length);
+                        s.Read(datalen, 0, datalen.Length);
                         uint dataLength = BitConverter.ToUInt32(datalen, 0);
 
                         //Read dataLength-bytes from the stream.
                         byte[] data = new byte[dataLength];
-                        stream.Read(data, 0, data.Length);
+                        s.Read(data, 0, data.Length);
                         //Take the first byte of the data and assign it to be a flag
                         string streamflag = Encoding.ASCII.GetString(data, 0, 1);
 
@@ -320,9 +313,8 @@ namespace HalkoNetworking
                         if (streamflag == "t")
                         {
                             uint clientId = BitConverter.ToUInt32(data, 1);
-                            Formatter f = new Formatter();
                             p = f.DeSerialize(data);
-                            MoveNonLocalClient(clientId, new Vector3(p.pos_x, p.pos_y, p.pos_z));
+                            SetRemoteClientTransform(clientId, new Vector3(p.pos_x, p.pos_y, p.pos_z), new Vector3(p.rot_x, p.rot_y, p.rot_z));
                         }
                         //If the received stream holds information, that a new client has connected to the room.
                         else if (streamflag == "n")
@@ -338,6 +330,13 @@ namespace HalkoNetworking
                         else if (streamflag == "l")
                         {
                             uint leftPlayerId = BitConverter.ToUInt32(data, 1);
+                            for(int i = 0; i < clients.Count; i++)
+                            {
+                                if(leftPlayerId == clients[i].clientId)
+                                {
+                                    clients.RemoveAt(i);
+                                }
+                            }
                             clientHandler.LastLeftPlayer = leftPlayerId;
                         }
                     }
@@ -396,25 +395,31 @@ namespace HalkoNetworking
             for(int i = 0; i < clients.Count; i++)
             {
                 ClientInfo c = clients[i];
-                clientHandler.InstantiatePlayer(
+                HalkoPlayer h = clientHandler.InstantiatePlayer(
                     c.clientId,
                     c.clientName,
                     c.isLocalClient
                     );
+                if (c.isLocalClient)
+                {
+                    localPlayer = h;
+                }
             }
 
             Receive('r');
         }
 
-        IEnumerator LoadScene()
+        IEnumerator LoadScene(string scene)
         {
-            AsyncOperation load = SceneManager.LoadSceneAsync(nextScene);
+            AsyncOperation load = SceneManager.LoadSceneAsync(scene);
             while(!load.isDone)
             {
                 yield return null;
             }
-            print("Scene index: " + SceneManager.GetActiveScene().buildIndex);
-            SpawnPlayers();
+            if(clients.Count > 0)
+            {
+                SpawnPlayers();
+            }
         }
 
         //Callbacks:
@@ -435,19 +440,9 @@ namespace HalkoNetworking
 
         private void _OnCreatedRoom(uint playerId)
         {
+            connectedToRoom = true;
             print("Scene index: " + SceneManager.GetActiveScene().buildIndex);
             clientId = playerId;
-
-            //connectedToRoom = true;
-
-            //Receive('r');
-            /*
-            clientHandler.InstantiatePlayer(
-            clientId,
-            clientName,
-            true
-            );
-            */
 
             clients.Add(new ClientInfo(
                 clientId,
@@ -455,15 +450,15 @@ namespace HalkoNetworking
                 true
                 ));
 
-            StartCoroutine(LoadScene());
+            StartCoroutine(LoadScene(nextScene));
             print("Room created!");
             OnCreatedRoom();
         }
 
         private void _OnJoinedRoom(uint playerId)
         {
+            connectedToRoom = true;
             clientId = playerId;
-            //connectedToRoom = true;
 
             //Receive data about how many players have to be instantiated to the room.
             byte[] data = new byte[4];
@@ -486,32 +481,29 @@ namespace HalkoNetworking
                     Encoding.ASCII.GetString(pInfo, 4, (int)cNameSize),
                     false
                     ));
-                /*
-                clientHandler.InstantiatePlayer(
-                    BitConverter.ToUInt32(pInfo, 0),
-                    Encoding.ASCII.GetString(pInfo, 4, pInfoSize - 4),
-                    false
-                    );
-                    */
             }
-
-            //Receive('r');
 
             clients.Add(new ClientInfo(
                 clientId,
                 clientName,
                 true
                 ));
-            /*
-            clientHandler.InstantiatePlayer(
-                clientId,
-                clientName,
-                true
-                );
-                */
-            StartCoroutine(LoadScene());
+
+            StartCoroutine(LoadScene(nextScene));
             print("Room joined");
             OnJoinedRoom();
+        }
+        
+        private void _OnLeftRoom()
+        {
+            print("Room left.");
+            connectedToRoom = false;
+            Destroy(localPlayer.gameObject);
+            localPlayer = null;
+            clients.Clear();
+            clientHandler.connectedPlayers.Clear();
+            StartCoroutine(LoadScene(offlineScene));
+            OnLeftRoom();
         }
 
         private void _OnCreateRoomFailed(string msg)
@@ -552,6 +544,10 @@ namespace HalkoNetworking
         {
         }
 
+        public virtual void OnLeftRoom()
+        {
+
+        }
     }
 
 }

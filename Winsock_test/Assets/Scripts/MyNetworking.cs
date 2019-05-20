@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using HalkoNetworking;
+using UnityEngine.SceneManagement;
 
 public class MyNetworking : HalkoNetwork
 {
@@ -48,5 +49,10 @@ public class MyNetworking : HalkoNetwork
 
     public override void OnJoinRoomFailed(string msg)
     {
+    }
+
+    public override void OnLeftRoom()
+    {
+        ms.OpenMenu(1);
     }
 }
