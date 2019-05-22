@@ -131,7 +131,7 @@ namespace HalkoNetworking
             p.rot_z = transform.eulerAngles.z;
             Formatter f = new Formatter();
             byte[] id = BitConverter.GetBytes(clientId);
-            byte[] data = f.Serialize(id, (byte)'t', p);
+            byte[] data = f.SerializePackage(id, (byte)'t', p);
             stream.Write(data, 0, data.Length);
         }
 

@@ -1,7 +1,6 @@
-﻿using System.Reflection;
-using System.Collections.Generic;
-using UnityEngine;
+﻿using UnityEngine;
 using HalkoNetworking;
+using HalkoNetworking.RemoteMethod;
 
 public class MyNetworking : HalkoNetwork
 {
@@ -20,10 +19,15 @@ public class MyNetworking : HalkoNetwork
     }
 
     //Public methods:
-
     public void Connect()
     {
         ConnectToHalko();
+    }
+
+    [HalkoMethod]
+    public void Test(string test)
+    {
+        print(test);
     }
 
     //Overrided methods:
