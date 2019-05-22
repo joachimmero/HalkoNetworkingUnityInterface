@@ -1,18 +1,17 @@
-﻿using System.Collections;
+﻿using System.Reflection;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 using HalkoNetworking;
-using UnityEngine.SceneManagement;
 
 public class MyNetworking : HalkoNetwork
 {
     //Public fields:
     private MenuScript ms;
+    private HalkoAttributeHandler ah;
 
     private void Start()
     {
-        ms = FindObjectOfType<MenuScript>();    
+        ms = FindObjectOfType<MenuScript>();
     }
 
     // Update is called once per frame

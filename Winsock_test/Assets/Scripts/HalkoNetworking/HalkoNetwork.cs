@@ -7,6 +7,7 @@ using System.Net;
 using System.Net.Sockets;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using HalkoNetworking.RemoteMethod;
 
 namespace HalkoNetworking
 {
@@ -63,9 +64,9 @@ namespace HalkoNetworking
             string hostName = Dns.GetHostName();
             string ip = Dns.GetHostAddresses(hostName)[1].ToString();
 
-            if (ip.ToString() != "10.206.28.223")
+            if (ip.ToString() != "192.168.0.157")
             {
-                ip = "10.206.28.223";
+                ip = "192.168.0.157";
             }
             Connect(ip, 27015);
         }
