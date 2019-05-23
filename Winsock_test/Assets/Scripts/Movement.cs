@@ -10,9 +10,16 @@ public class Movement : MonoBehaviour
     public float moveSpeed;
     public float rotateSpeed;
 
+    //Private fields:
+    private MyNetworking myNetworking;
     private void Start()
     {
-        h = GetComponent<HalkoPlayer>();    
+        h = GetComponent<HalkoPlayer>();
+        myNetworking = FindObjectOfType<MyNetworking>();
+        if(!GetComponent<HalkoPlayer>().isLocalPlayer)
+        {
+            this.enabled = false;
+        }
     }
 
     // Update is called once per frame
@@ -24,5 +31,10 @@ public class Movement : MonoBehaviour
         */
         h.position = new Vector3(h.position.x + (Input.GetAxis("Horizontal") * moveSpeed * Time.deltaTime), h.position.y, h.position.z + (Input.GetAxis("Vertical") * moveSpeed * Time.deltaTime));
         h.eulerAngles = new Vector3(h.eulerAngles.x, h.eulerAngles.y + (Input.GetAxis("Mouse X") * rotateSpeed * Time.deltaTime), h.eulerAngles.z);
+
+        if(Input.GetKeyDown(KeyCode.H))
+        {
+            myNetworking.InvokeMethod("ChangePlayerColor");
+        }
     }
 }

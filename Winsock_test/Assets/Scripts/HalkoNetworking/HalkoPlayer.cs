@@ -24,7 +24,7 @@ namespace HalkoNetworking
             }
             set
             {
-                if (isLocalPlayer && value != transform.position)
+                if (value != transform.position)
                 {
                     transform.position = value;
                     transformChanged = true;
@@ -41,7 +41,7 @@ namespace HalkoNetworking
             set
             {
                 
-                if(isLocalPlayer && value != transform.eulerAngles)
+                if(value != transform.eulerAngles)
                 {
                     transform.eulerAngles = value;
                     transformChanged = true;
@@ -80,7 +80,7 @@ namespace HalkoNetworking
 
         private void LateUpdate()
         {
-            if(transformChanged && isLocalPlayer)
+            if(transformChanged)
             {
                 if (client != null && client.Connected)
                 {
@@ -94,7 +94,7 @@ namespace HalkoNetworking
 
         public void Translate(Vector3 translation)
         {
-            if(translation != Vector3.zero && isLocalPlayer)
+            if(translation != Vector3.zero)
             {
                 transform.Translate(translation);
                 transformChanged = true;
@@ -103,7 +103,7 @@ namespace HalkoNetworking
 
         public void Rotate(Vector3 rotation)
         {
-            if(rotation != Vector3.zero && isLocalPlayer)
+            if(rotation != Vector3.zero)
             {
                 transform.Rotate(rotation);
                 transformChanged = true;
@@ -131,7 +131,7 @@ namespace HalkoNetworking
             p.rot_z = transform.eulerAngles.z;
             Formatter f = new Formatter();
             byte[] id = BitConverter.GetBytes(clientId);
-            byte[] data = f.Serialize(id, (byte)'t', p);
+            byte[] data = f.SerializePackage(id, (byte)'t', p);
             stream.Write(data, 0, data.Length);
         }
 

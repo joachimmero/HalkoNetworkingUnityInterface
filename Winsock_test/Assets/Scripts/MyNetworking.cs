@@ -1,18 +1,17 @@
-﻿using System.Collections;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
+﻿using UnityEngine;
 using HalkoNetworking;
-using UnityEngine.SceneManagement;
+using HalkoNetworking.RemoteMethod;
+using System.Collections.Generic;
 
 public class MyNetworking : HalkoNetwork
 {
     //Public fields:
     private MenuScript ms;
+    private HalkoAttributeHandler ah;
 
     private void Start()
     {
-        ms = FindObjectOfType<MenuScript>();    
+        ms = FindObjectOfType<MenuScript>();
     }
 
     // Update is called once per frame
@@ -21,10 +20,21 @@ public class MyNetworking : HalkoNetwork
     }
 
     //Public methods:
-
     public void Connect()
     {
         ConnectToHalko();
+    }
+
+    [HalkoMethod]
+    public void Test()
+    {
+        print("testi");
+    }
+
+    [HalkoMethod]
+    public void ChangePlayerColor()
+    {
+        print("kakkostesti");
     }
 
     //Overrided methods:
