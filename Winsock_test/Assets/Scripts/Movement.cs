@@ -16,6 +16,10 @@ public class Movement : MonoBehaviour
     {
         h = GetComponent<HalkoPlayer>();
         myNetworking = FindObjectOfType<MyNetworking>();
+        if(!GetComponent<HalkoPlayer>().isLocalPlayer)
+        {
+            this.enabled = false;
+        }
     }
 
     // Update is called once per frame
@@ -30,7 +34,7 @@ public class Movement : MonoBehaviour
 
         if(Input.GetKeyDown(KeyCode.H))
         {
-            myNetworking.InvokeMethod("Test", new object[] { (object)"testitesti" });
+            myNetworking.InvokeMethod("ChangePlayerColor");
         }
     }
 }

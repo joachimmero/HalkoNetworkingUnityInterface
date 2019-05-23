@@ -5,7 +5,6 @@ namespace HalkoNetworking
 {
     public class HalkoAttributeHandler
     {
-
         //Public methods:
 
         /// <summary>

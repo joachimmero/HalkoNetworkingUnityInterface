@@ -37,7 +37,7 @@ namespace HalkoNetworking
         private int mainThreadId;
         private bool connectedToHalko = false;
         private List<ClientInfo> clients;
-        private Dictionary<string, MethodInfo> halkoMethods;
+        private List<KeyValuePair<string, MethodInfo>> halkoMethods;
         private TcpClient client;
         private NetworkStream stream;
         private Formatter formatter;
@@ -243,22 +243,24 @@ namespace HalkoNetworking
         /// </summary>
         /// <param name="methodName"></param>
         /// <param name="parameters"></param>
-        public void InvokeMethod(string methodName, object[] parameters)
+        public void InvokeMethod(string methodName)
         {
             bool methodFound = false;
             //If the methodName matches the key of a key-value -pair
             //in the dictionary.
-            if(halkoMethods.ContainsKey(methodName))
+            for(int i = halkoMethods.Count - 1; i >= 0; --i)
             {
-                methodFound = true;
-                //Call the method locally.
-                halkoMethods[methodName].Invoke(this, parameters);
+                if(halkoMethods[i].Key == methodName)
+                {
+                    print(i);
+                    methodFound = true;
+                    //Call the method locally.
+                    halkoMethods[i].Value.Invoke(this, new object[] { });
 
-                byte[] methodData = formatter.SerializeMethod((byte)'m', methodName, parameters);
-                stream.Write(methodData, 0, methodData.Length);
+                    byte[] methodData = formatter.SerializeMethod((byte)'m', i);
+                    stream.Write(methodData, 0, methodData.Length);
+                }
             }
-            
-
             //If method wasn't found, throw an error.
             if(!methodFound)
             {
@@ -270,13 +272,13 @@ namespace HalkoNetworking
         
         private void GetHalkoMethods()
         {
-            halkoMethods = new Dictionary<string, MethodInfo>();
+            halkoMethods = new List<KeyValuePair<string, MethodInfo>>();
             ah = new HalkoAttributeHandler();
             List<MethodInfo> tempMethods = ah.GetMethodsWithAttribute(this.GetType().GetTypeInfo(), typeof(RemoteMethod.HalkoMethod));
 
             for (int i = tempMethods.Count - 1; i >= 0; --i)
             {
-                halkoMethods.Add(tempMethods[i].Name, tempMethods[i]);
+                halkoMethods.Add(new KeyValuePair<string, MethodInfo>(tempMethods[i].Name, tempMethods[i]));
             }
         }
 
@@ -366,11 +368,9 @@ namespace HalkoNetworking
                         //a method needs to be called.
                         else if(streamflag == "m")
                         {
-                            KeyValuePair<string, object[]> method = f.DeSerializeMethod(data); 
-                            if(halkoMethods.ContainsKey(method.Key))
-                            {
-                                halkoMethods[method.Key].Invoke(this, method.Value);
-                            }
+                            int index = f.DeSerializeMethod(data);
+                            print(index);
+                            halkoMethods[index].Value.Invoke(this, new object[] { });
                         }
                         //If the received stream holds information, that a new client has connected to the room.
                         else if (streamflag == "n")

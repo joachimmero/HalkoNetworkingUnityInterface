@@ -1,6 +1,7 @@
 ﻿using UnityEngine;
 using HalkoNetworking;
 using HalkoNetworking.RemoteMethod;
+using System.Collections.Generic;
 
 public class MyNetworking : HalkoNetwork
 {
@@ -25,9 +26,15 @@ public class MyNetworking : HalkoNetwork
     }
 
     [HalkoMethod]
-    public void Test(string test)
+    public void Test()
     {
-        print(test);
+        print("testi");
+    }
+
+    [HalkoMethod]
+    public void ChangePlayerColor()
+    {
+        print("kakkostesti");
     }
 
     //Overrided methods:
