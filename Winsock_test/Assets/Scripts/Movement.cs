@@ -34,7 +34,7 @@ public class Movement : MonoBehaviour
 
         if(Input.GetKeyDown(KeyCode.H))
         {
-            myNetworking.InvokeMethod1("PrintMsg", new object[] { "haistakaa paska", 10 });
+            myNetworking.InvokeMethod("ChangePlayerColor");
         }
     }
 }

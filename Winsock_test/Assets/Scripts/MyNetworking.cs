@@ -26,9 +26,9 @@ public class MyNetworking : HalkoNetwork
     }
 
     [HalkoMethod]
-    public void PrintMsg(string msg, int i)
+    public void Test()
     {
-        print(msg + i.ToString());
+        print("testi");
     }
 
     [HalkoMethod]
