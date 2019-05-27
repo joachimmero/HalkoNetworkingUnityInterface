@@ -268,8 +268,38 @@ namespace HalkoNetworking
             }
         }
 
+        /// <summary>
+        /// Used to call a method locally and remotely.
+        /// </summary>
+        /// <param name="methodName"></param>
+        /// <param name="parameters"></param>
+        public void InvokeMethod1(string methodName, object[] parameters)
+        {
+            bool methodFound = false;
+            //If the methodName matches the key of a key-value -pair
+            //in the dictionary.
+            for (int i = halkoMethods.Count - 1; i >= 0; --i)
+            {
+                if (halkoMethods[i].Key == methodName)
+                {
+                    print(i);
+                    methodFound = true;
+                    //Call the method locally.
+                    halkoMethods[i].Value.Invoke(this, parameters);
+
+                    byte[] methodData = formatter.SerializeMethod2((byte)'m', i, parameters);
+                    stream.Write(methodData, 0, methodData.Length);
+                }
+            }
+            //If method wasn't found, throw an error.
+            if (!methodFound)
+            {
+                throw new Exception("No method with with this name was found.");
+            }
+        }
+
         //Private methods
-        
+
         private void GetHalkoMethods()
         {
             halkoMethods = new List<KeyValuePair<string, MethodInfo>>();
@@ -368,9 +398,15 @@ namespace HalkoNetworking
                         //a method needs to be called.
                         else if(streamflag == "m")
                         {
-                            int index = f.DeSerializeMethod(data);
+                            /*
+                             int index = f.DeSerializeMethod(data);
                             print(index);
-                            halkoMethods[index].Value.Invoke(this, new object[] { });
+                            halkoMethods[index].Value.Invoke(this, new object[] { }); 
+                             */
+                            KeyValuePair<int, object[]> method = f.DeSerializeMethod2(data);
+                            
+                            halkoMethods[method.Key].Value.Invoke(this, method.Value);
+
                         }
                         //If the received stream holds information, that a new client has connected to the room.
                         else if (streamflag == "n")
