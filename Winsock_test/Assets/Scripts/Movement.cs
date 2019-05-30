@@ -22,6 +22,14 @@ public class Movement : MonoBehaviour
         }
     }
 
+    private void Update()
+    {
+
+        if (Input.GetKeyDown(KeyCode.H))
+        {
+            myNetworking.InvokeMethod1("PrintVector", new object[] { new Vector2(10f, 10f), new Vector3(20f, 20f, 20f), new Vector4(30f, 30f, 30f, 30f)});
+        }
+    }
     // Update is called once per frame
     void FixedUpdate()
     {
@@ -32,9 +40,5 @@ public class Movement : MonoBehaviour
         h.position = new Vector3(h.position.x + (Input.GetAxis("Horizontal") * moveSpeed * Time.deltaTime), h.position.y, h.position.z + (Input.GetAxis("Vertical") * moveSpeed * Time.deltaTime));
         h.eulerAngles = new Vector3(h.eulerAngles.x, h.eulerAngles.y + (Input.GetAxis("Mouse X") * rotateSpeed * Time.deltaTime), h.eulerAngles.z);
 
-        if(Input.GetKeyDown(KeyCode.H))
-        {
-            myNetworking.InvokeMethod1("PrintMsg", new object[] { "haistakaa paska", 10 });
-        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System;
+using System.Diagnostics;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -33,55 +34,6 @@ public class MenuScript : MonoBehaviour
     // Start is called before the first frame update
     void Start()
     {
-        object[] objs = new object[]
-        {
-            (object)"ookei",
-            (object)true,
-            (object)152,
-            (object)'w',
-            (object)(uint)132,
-            (object)1.52f,
-            (object)1.35
-        };
-        for(int i = objs.Length - 1; i >= 0; --i)
-        {
-            if(objs[i].GetType() == typeof(bool))
-            {
-                bool temp = (bool)objs[i];
-                print("Bool: " + temp);
-            }
-            else if(objs[i].GetType() == typeof(uint))
-            {
-                uint temp = (uint)objs[i];
-                print("UInt: " + temp);
-            }
-            else if (objs[i].GetType() == typeof(string))
-            {
-                string temp = (string)objs[i];
-                print("String: " + temp);
-            }
-            else if (objs[i].GetType() == typeof(char))
-            {
-                char temp = (char)objs[i];
-                print("Char: " + temp);
-            }
-            else if (objs[i].GetType() == typeof(double))
-            {
-                double temp = (double)objs[i];
-                print("Double: " + temp);
-            }
-            else if (objs[i].GetType() == typeof(float))
-            {
-                float temp = (float)objs[i];
-                print("Float: " + temp);
-            }
-            else if (objs[i].GetType() == typeof(int))
-            {
-                int temp = (int)objs[i];
-                print("Int: " + temp);
-            }
-        }
-
         DontDestroyOnLoad(this);
         connectionStatus.text = "NOT CONNECTED";
         connectionStatus.color = Color.red;

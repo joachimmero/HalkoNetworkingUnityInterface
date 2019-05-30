@@ -404,7 +404,7 @@ namespace HalkoNetworking
                             halkoMethods[index].Value.Invoke(this, new object[] { }); 
                              */
                             KeyValuePair<int, object[]> method = f.DeSerializeMethod2(data);
-                            
+                            print("Jeesi");
                             halkoMethods[method.Key].Value.Invoke(this, method.Value);
 
                         }
