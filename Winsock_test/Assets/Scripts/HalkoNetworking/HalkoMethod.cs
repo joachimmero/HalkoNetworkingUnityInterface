@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Net.Sockets;
 
 namespace HalkoNetworking.RemoteMethod
 {
@@ -13,9 +14,25 @@ namespace HalkoNetworking.RemoteMethod
     {
         //Private fields:
         private List<KeyValuePair<string, MethodInfo>> halkoMethods;
+        private NetworkStream stream;
         private HalkoNetwork halkoNetwork;
         private HalkoAttributeHandler ah;
         private Formatter formatter;
+
+        public HalkoClass()
+        {
+            try
+            {
+                halkoNetwork = FindObjectOfType<HalkoNetwork>();
+            }
+            catch (Exception e)
+            {
+                Debug.Log("No HalkoNetwork-object found in the scene. " + e.Message);
+            }
+            stream = halkoNetwork.Client.GetStream();
+            formatter = new Formatter();
+            GetHalkoMethods();
+        }
 
         private void Awake()
         {
@@ -27,7 +44,7 @@ namespace HalkoNetworking.RemoteMethod
             {
                 Debug.Log("No HalkoNetwork-object found in the scene. " + e.Message);
             }
-
+            stream = halkoNetwork.Client.GetStream();
             formatter = new Formatter();
             GetHalkoMethods();
         }
@@ -52,8 +69,8 @@ namespace HalkoNetworking.RemoteMethod
                     //Call the method locally.
                     halkoMethods[i].Value.Invoke(this, parameters);
 
-                    byte[] methodData = formatter.SerializeMethod2((byte)'m', i, parameters);
-                    halkoNetwork.stream.Write(methodData, 0, methodData.Length);
+                    byte[] methodData = formatter.SerializeMethod((byte)'m', i, parameters);
+                    stream.Write(methodData, 0, methodData.Length);
                 }
             }
             //If method wasn't found, throw an error.

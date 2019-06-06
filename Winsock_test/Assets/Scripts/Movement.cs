@@ -12,6 +12,8 @@ public class Movement : MonoBehaviour
 
     //Private fields:
     private MyNetworking myNetworking;
+    private TestAbility testAbility;
+
     private void Start()
     {
         h = GetComponent<HalkoPlayer>();
@@ -20,6 +22,8 @@ public class Movement : MonoBehaviour
         {
             this.enabled = false;
         }
+
+        testAbility = GetComponent<TestAbility>();
     }
 
     private void Update()
@@ -27,7 +31,7 @@ public class Movement : MonoBehaviour
 
         if (Input.GetKeyDown(KeyCode.H))
         {
-            myNetworking.InvokeMethod1("PrintVector", new object[] { new Vector2(10f, 10f), new Vector3(20f, 20f, 20f), new Vector4(30f, 30f, 30f, 30f)});
+            testAbility.InvokeMethod("ChangeColor", new object[] {});
         }
     }
     // Update is called once per frame

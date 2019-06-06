@@ -237,7 +237,7 @@ namespace HalkoNetworking
             
             return rooms;
         }
-
+        /*
         /// <summary>
         /// Used to call a method locally and remotely.
         /// </summary>
@@ -282,12 +282,11 @@ namespace HalkoNetworking
             {
                 if (halkoMethods[i].Key == methodName)
                 {
-                    print(i);
                     methodFound = true;
                     //Call the method locally.
                     halkoMethods[i].Value.Invoke(this, parameters);
 
-                    byte[] methodData = formatter.SerializeMethod2((byte)'m', i, parameters);
+                    byte[] methodData = formatter.SerializeMethod((byte)'m', i, parameters);
                     stream.Write(methodData, 0, methodData.Length);
                 }
             }
@@ -297,7 +296,7 @@ namespace HalkoNetworking
                 throw new Exception("No method with with this name was found.");
             }
         }
-
+        */
         //Private methods
 
         private void GetHalkoMethods()
@@ -403,7 +402,7 @@ namespace HalkoNetworking
                             print(index);
                             halkoMethods[index].Value.Invoke(this, new object[] { }); 
                              */
-                            KeyValuePair<int, object[]> method = f.DeSerializeMethod2(data);
+                            KeyValuePair<int, object[]> method = f.DeSerializeMethod(data);
                             print("Jeesi");
                             halkoMethods[method.Key].Value.Invoke(this, method.Value);
 
