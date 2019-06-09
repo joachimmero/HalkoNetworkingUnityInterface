@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.Sockets;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using HalkoNetworking.RemoteMethod;
 
 namespace HalkoNetworking
 {
@@ -65,6 +66,7 @@ namespace HalkoNetworking
             //TEMP
             formatter = new Formatter();
             GetHalkoMethods();
+            GetHalkoClasses();
 
             string hostName = Dns.GetHostName();
             string ip = Dns.GetHostAddresses(hostName)[1].ToString();
@@ -308,6 +310,23 @@ namespace HalkoNetworking
             for (int i = tempMethods.Count - 1; i >= 0; --i)
             {
                 halkoMethods.Add(new KeyValuePair<string, MethodInfo>(tempMethods[i].Name, tempMethods[i]));
+            }
+        }
+
+        private void GetHalkoClasses()
+        {
+            Assembly assembly = Assembly.GetExecutingAssembly();
+
+            Type[] types = assembly.GetTypes();
+
+            print("Classes in assembly: " + types.Length);
+
+            for(int i = types.Length -1; i >= 0; i--)
+            {
+                if(types[i] == typeof(HalkoClass))
+                {
+                    print("HalkoClass found at index: " + i);
+                }
             }
         }
 

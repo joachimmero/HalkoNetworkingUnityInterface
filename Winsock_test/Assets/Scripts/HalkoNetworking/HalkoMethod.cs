@@ -18,7 +18,7 @@ namespace HalkoNetworking.RemoteMethod
         private HalkoNetwork halkoNetwork;
         private HalkoAttributeHandler ah;
         private Formatter formatter;
-
+        /*
         public HalkoClass()
         {
             try
@@ -33,7 +33,7 @@ namespace HalkoNetworking.RemoteMethod
             formatter = new Formatter();
             GetHalkoMethods();
         }
-
+        */
         private void Awake()
         {
             try
