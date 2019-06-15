@@ -55,7 +55,7 @@ namespace HalkoNetworking
             return p;
         }
         
-        public byte[] SerializeMethod(byte flag, int index, object[] parameters)
+        public byte[] SerializeMethod(byte flag, int classIndex, int methodIndex, object[] parameters)
         {
             //Temporary list for the parameters.
             List<byte> tempBytes = new List<byte>();
@@ -200,14 +200,16 @@ namespace HalkoNetworking
                 }
             }
 
-            byte[] streamLength = BitConverter.GetBytes((uint)(9 + tempBytes.Count));
+            byte[] streamLength = BitConverter.GetBytes((uint)(13 + tempBytes.Count));
             //unsigned int streamSize + byte flag size + paramsAmount (uint) + method name size + parameters size
-            byte[] arr = new byte[13 + tempBytes.Count];
+            byte[] arr = new byte[17 + tempBytes.Count];
 
-            byte[] indexBytes = BitConverter.GetBytes((uint)index);
+            byte[] classIndexBytes = BitConverter.GetBytes((uint)classIndex);
 
-            byte[] paramsBytes = BitConverter.GetBytes(paramsCount);
+            byte[] paramsCountBytes = BitConverter.GetBytes(paramsCount);
 
+            byte[] methodIndexBytes = BitConverter.GetBytes((uint)methodIndex);
+            
             //Add the size of the stream to the first four indexes of arr.
             arr[0] = streamLength[0];
             arr[1] = streamLength[1];
@@ -216,19 +218,24 @@ namespace HalkoNetworking
 
             arr[4] = flag;
 
-            arr[5] = paramsBytes[0];
-            arr[6] = paramsBytes[1];
-            arr[7] = paramsBytes[2];
-            arr[8] = paramsBytes[3];
+            arr[5] = classIndexBytes[0];
+            arr[6] = classIndexBytes[1];
+            arr[7] = classIndexBytes[2];
+            arr[8] = classIndexBytes[3];
+
+            arr[9] = paramsCountBytes[0];
+            arr[10] = paramsCountBytes[1];
+            arr[11] = paramsCountBytes[2];
+            arr[12] = paramsCountBytes[3];
             
-            arr[9] = indexBytes[0];
-            arr[10] = indexBytes[1];
-            arr[11] = indexBytes[2];
-            arr[12] = indexBytes[3];
+            arr[13] = methodIndexBytes[0];
+            arr[14] = methodIndexBytes[1];
+            arr[15] = methodIndexBytes[2];
+            arr[16] = methodIndexBytes[3];
 
             for (int i = 0; i < tempBytes.Count; i++)
             {
-                arr[i + 13] = tempBytes[i];
+                arr[i + 17] = tempBytes[i];
             }
             Debug.Log(tempBytes.Count);
             Debug.Log(arr.Length);
@@ -237,9 +244,9 @@ namespace HalkoNetworking
 
         public KeyValuePair<int, object[]> DeSerializeMethod(byte[] bytes)
         {
-            uint paramsLength = BitConverter.ToUInt32(bytes, 1);
+            uint paramsLength = BitConverter.ToUInt32(bytes, 5);
             object[] parameters = new object[paramsLength];
-            int i = 9;
+            int i = 13;
             for(int j = 0; j < paramsLength; j++)
             {
                 byte flag = bytes[i];
@@ -298,7 +305,7 @@ namespace HalkoNetworking
                 }
             }
 
-            int methodIndex = BitConverter.ToInt32(bytes, 5);
+            int methodIndex = BitConverter.ToInt32(bytes, 9);
             KeyValuePair<int, object[]> method = new KeyValuePair<int, object[]>(methodIndex, parameters);
 
             return method;

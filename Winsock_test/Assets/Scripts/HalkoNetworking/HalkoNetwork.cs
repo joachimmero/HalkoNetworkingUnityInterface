@@ -32,6 +32,7 @@ namespace HalkoNetworking
         }
 
         //Public fields:
+        public List<HalkoClass> halkoClasses;
 
         //Private fields:
         private uint clientId;
@@ -41,7 +42,6 @@ namespace HalkoNetworking
         private List<KeyValuePair<string, MethodInfo>> halkoMethods;
         private TcpClient client;
         private NetworkStream stream;
-        private Formatter formatter;
         private HalkoClientHandler clientHandler;
         private HalkoAttributeHandler ah;
 
@@ -63,10 +63,7 @@ namespace HalkoNetworking
 
             DontDestroyOnLoad(gameObject);
 
-            //TEMP
-            formatter = new Formatter();
-            GetHalkoMethods();
-            GetHalkoClasses();
+            halkoClasses = new List<HalkoClass>();
 
             string hostName = Dns.GetHostName();
             string ip = Dns.GetHostAddresses(hostName)[1].ToString();
@@ -239,103 +236,20 @@ namespace HalkoNetworking
             
             return rooms;
         }
-        /*
-        /// <summary>
-        /// Used to call a method locally and remotely.
-        /// </summary>
-        /// <param name="methodName"></param>
-        /// <param name="parameters"></param>
-        public void InvokeMethod(string methodName)
-        {
-            bool methodFound = false;
-            //If the methodName matches the key of a key-value -pair
-            //in the dictionary.
-            for(int i = halkoMethods.Count - 1; i >= 0; --i)
-            {
-                if(halkoMethods[i].Key == methodName)
-                {
-                    print(i);
-                    methodFound = true;
-                    //Call the method locally.
-                    halkoMethods[i].Value.Invoke(this, new object[] { });
 
-                    byte[] methodData = formatter.SerializeMethod((byte)'m', i);
-                    stream.Write(methodData, 0, methodData.Length);
-                }
-            }
-            //If method wasn't found, throw an error.
-            if(!methodFound)
-            {
-                throw new Exception("No method with with this name was found.");
-            }
+        //Adds a HalkoClass to the halkoClasses-list and returns its index.
+        public int AddHalkoClass(HalkoClass h)
+        {
+            halkoClasses.Add(h);
+            return halkoClasses.Count - 1;
         }
 
-        /// <summary>
-        /// Used to call a method locally and remotely.
-        /// </summary>
-        /// <param name="methodName"></param>
-        /// <param name="parameters"></param>
-        public void InvokeMethod1(string methodName, object[] parameters)
-        {
-            bool methodFound = false;
-            //If the methodName matches the key of a key-value -pair
-            //in the dictionary.
-            for (int i = halkoMethods.Count - 1; i >= 0; --i)
-            {
-                if (halkoMethods[i].Key == methodName)
-                {
-                    methodFound = true;
-                    //Call the method locally.
-                    halkoMethods[i].Value.Invoke(this, parameters);
-
-                    byte[] methodData = formatter.SerializeMethod((byte)'m', i, parameters);
-                    stream.Write(methodData, 0, methodData.Length);
-                }
-            }
-            //If method wasn't found, throw an error.
-            if (!methodFound)
-            {
-                throw new Exception("No method with with this name was found.");
-            }
-        }
-        */
         //Private methods
-
-        private void GetHalkoMethods()
-        {
-            halkoMethods = new List<KeyValuePair<string, MethodInfo>>();
-            ah = new HalkoAttributeHandler();
-            List<MethodInfo> tempMethods = ah.GetMethodsWithAttribute(this.GetType().GetTypeInfo(), typeof(RemoteMethod.HalkoMethod));
-
-            for (int i = tempMethods.Count - 1; i >= 0; --i)
-            {
-                halkoMethods.Add(new KeyValuePair<string, MethodInfo>(tempMethods[i].Name, tempMethods[i]));
-            }
-        }
-
-        private void GetHalkoClasses()
-        {
-            Assembly assembly = Assembly.GetExecutingAssembly();
-
-            Type[] types = assembly.GetTypes();
-
-            print("Classes in assembly: " + types.Length);
-
-            for(int i = types.Length -1; i >= 0; i--)
-            {
-                if(types[i] == typeof(HalkoClass))
-                {
-                    print("HalkoClass found at index: " + i);
-                }
-            }
-        }
 
         private void Connect(string ip, int port)
         {
             clientHandler = this.gameObject.AddComponent<HalkoClientHandler>();
             mainThreadId = Thread.CurrentThread.ManagedThreadId;
-            //instantiationList = new List<HalkoPlayer>();
-            //leftPlayers = new List<uint>();
 
             try
             {
@@ -348,17 +262,6 @@ namespace HalkoNetworking
                 clients = new List<ClientInfo>();
 
                 Receive('c');
-                /*
-                //Buffer to receive the TcpServer.response
-                byte[] data = new byte[512];
-
-                //String to store the response ASCII representation.
-                string responseData = "";
-
-                //Read the first batch of the TcpServer response bytes.
-                int bytes = stream.Read(data, 0, data.Length);
-                responseData = Encoding.ASCII.GetString(data, 0, bytes);
-                print(responseData);*/
             } 
             catch (SocketException e)
             {
@@ -402,7 +305,8 @@ namespace HalkoNetworking
                         //Read dataLength-bytes from the stream.
                         byte[] data = new byte[dataLength];
                         s.Read(data, 0, data.Length);
-                        //Take the first byte of the data and assign it to be a flag
+
+                        //Take the first byte of the data and assign it to be the streamFlag.
                         string streamflag = Encoding.ASCII.GetString(data, 0, 1);
 
                         //If the received stream holds a clients transform information.
@@ -416,19 +320,18 @@ namespace HalkoNetworking
                         //a method needs to be called.
                         else if(streamflag == "m")
                         {
-                            /*
-                             int index = f.DeSerializeMethod(data);
-                            print(index);
-                            halkoMethods[index].Value.Invoke(this, new object[] { }); 
-                             */
+                            //Get the classIndex of the halkoClass from the stream.
+                            uint classIndex = BitConverter.ToUInt32(data, 1);
+
                             KeyValuePair<int, object[]> method = f.DeSerializeMethod(data);
                             print("Jeesi");
-                            halkoMethods[method.Key].Value.Invoke(this, method.Value);
-
+                            HalkoClass classWithMethod = halkoClasses[(int)classIndex];
+                            classWithMethod.halkoMethodHandler.methodsWaitingForInvoke.Add(method);
                         }
                         //If the received stream holds information, that a new client has connected to the room.
                         else if (streamflag == "n")
                         {
+                            print("New player has joined the room.");
                             //Handle the received data and instantiate the appropriate players.
                             clientHandler.LastJoinedPlayer = new ClientInfo(
                                 BitConverter.ToUInt32(data, 1),

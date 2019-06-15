@@ -12,28 +12,17 @@ namespace HalkoNetworking.RemoteMethod
     }
     public class HalkoClass : MonoBehaviour
     {
+        //Public fields: 
+        public HalkoMethodHandler halkoMethodHandler;
+
         //Private fields:
+        private int classIndex;
         private List<KeyValuePair<string, MethodInfo>> halkoMethods;
         private NetworkStream stream;
         private HalkoNetwork halkoNetwork;
         private HalkoAttributeHandler ah;
         private Formatter formatter;
-        /*
-        public HalkoClass()
-        {
-            try
-            {
-                halkoNetwork = FindObjectOfType<HalkoNetwork>();
-            }
-            catch (Exception e)
-            {
-                Debug.Log("No HalkoNetwork-object found in the scene. " + e.Message);
-            }
-            stream = halkoNetwork.Client.GetStream();
-            formatter = new Formatter();
-            GetHalkoMethods();
-        }
-        */
+        
         private void Awake()
         {
             try
@@ -44,6 +33,10 @@ namespace HalkoNetworking.RemoteMethod
             {
                 Debug.Log("No HalkoNetwork-object found in the scene. " + e.Message);
             }
+
+            halkoMethodHandler = this.gameObject.AddComponent<HalkoMethodHandler>();
+            halkoMethodHandler.parentClass = this;
+            classIndex = halkoNetwork.AddHalkoClass(this);
             stream = halkoNetwork.Client.GetStream();
             formatter = new Formatter();
             GetHalkoMethods();
@@ -69,7 +62,7 @@ namespace HalkoNetworking.RemoteMethod
                     //Call the method locally.
                     halkoMethods[i].Value.Invoke(this, parameters);
 
-                    byte[] methodData = formatter.SerializeMethod((byte)'m', i, parameters);
+                    byte[] methodData = formatter.SerializeMethod((byte)'m', classIndex, i, parameters);
                     stream.Write(methodData, 0, methodData.Length);
                 }
             }
@@ -80,6 +73,13 @@ namespace HalkoNetworking.RemoteMethod
             }
         }
 
+        //Adds the index and parameters of the method, that needs to be invoked
+        //to a list.
+        public void InvokeRemoteMethod(int methodIndex, object[] parameters)
+        {
+            halkoMethods[methodIndex].Value.Invoke(this, parameters);
+        }
+        
         //Private methods:
         private void GetHalkoMethods()
         {
