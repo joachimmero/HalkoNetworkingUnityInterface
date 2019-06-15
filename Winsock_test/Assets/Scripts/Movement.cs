@@ -12,6 +12,8 @@ public class Movement : MonoBehaviour
 
     //Private fields:
     private MyNetworking myNetworking;
+    private TestAbility testAbility;
+
     private void Start()
     {
         h = GetComponent<HalkoPlayer>();
@@ -20,8 +22,18 @@ public class Movement : MonoBehaviour
         {
             this.enabled = false;
         }
+
+        testAbility = GetComponent<TestAbility>();
     }
 
+    private void Update()
+    {
+
+        if (Input.GetKeyDown(KeyCode.H))
+        {
+            testAbility.InvokeMethod("ChangeColor", new object[] {});
+        }
+    }
     // Update is called once per frame
     void FixedUpdate()
     {
@@ -32,9 +44,5 @@ public class Movement : MonoBehaviour
         h.position = new Vector3(h.position.x + (Input.GetAxis("Horizontal") * moveSpeed * Time.deltaTime), h.position.y, h.position.z + (Input.GetAxis("Vertical") * moveSpeed * Time.deltaTime));
         h.eulerAngles = new Vector3(h.eulerAngles.x, h.eulerAngles.y + (Input.GetAxis("Mouse X") * rotateSpeed * Time.deltaTime), h.eulerAngles.z);
 
-        if(Input.GetKeyDown(KeyCode.H))
-        {
-            myNetworking.InvokeMethod("ChangePlayerColor");
-        }
     }
 }

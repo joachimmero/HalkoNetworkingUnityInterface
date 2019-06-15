@@ -121,17 +121,18 @@ namespace HalkoNetworking
 
         private void SendTransform()
         {
-            print("Sending transform");
-            Package p = new Package();
-            p.pos_x = transform.position.x;
-            p.pos_y = transform.position.y;
-            p.pos_z = transform.position.z;
-            p.rot_x = transform.eulerAngles.x;
-            p.rot_y = transform.eulerAngles.y;
-            p.rot_z = transform.eulerAngles.z;
+            Package p = new Package
+            {
+                pos_x = transform.position.x,
+                pos_y = transform.position.y,
+                pos_z = transform.position.z,
+                rot_x = transform.eulerAngles.x,
+                rot_y = transform.eulerAngles.y,
+                rot_z = transform.eulerAngles.z
+            };
+
             Formatter f = new Formatter();
-            byte[] id = BitConverter.GetBytes(clientId);
-            byte[] data = f.SerializePackage(id, (byte)'t', p);
+            byte[] data = f.SerializePackage(BitConverter.GetBytes(clientId), (byte)'t', p);
             stream.Write(data, 0, data.Length);
         }
 

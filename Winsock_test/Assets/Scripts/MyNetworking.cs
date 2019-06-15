@@ -25,18 +25,6 @@ public class MyNetworking : HalkoNetwork
         ConnectToHalko();
     }
 
-    [HalkoMethod]
-    public void Test()
-    {
-        print("testi");
-    }
-
-    [HalkoMethod]
-    public void ChangePlayerColor()
-    {
-        print("kakkostesti");
-    }
-
     //Overrided methods:
 
     public override void OnConnectedToHalko()
