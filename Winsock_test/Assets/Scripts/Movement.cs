@@ -13,6 +13,7 @@ public class Movement : MonoBehaviour
     //Private fields:
     private MyNetworking myNetworking;
     private TestAbility testAbility;
+    private TestAbility2 testAbility2;
 
     private void Start()
     {
@@ -23,15 +24,44 @@ public class Movement : MonoBehaviour
             this.enabled = false;
         }
 
-        testAbility = GetComponent<TestAbility>();
+        testAbility = FindObjectOfType<TestAbility>();
+        testAbility2 = GetComponent<TestAbility2>();
     }
 
     private void Update()
     {
 
-        if (Input.GetKeyDown(KeyCode.H))
+        if (Input.GetKeyDown(KeyCode.R))
         {
-            testAbility.InvokeMethod("ChangeColor", new object[] {});
+            testAbility.InvokeMethod("ChangeColor", new object[] { 0 });
+        }
+        else if (Input.GetKeyDown(KeyCode.G))
+        {
+            testAbility.InvokeMethod("ChangeColor", new object[] { 1 });
+        }
+        else if (Input.GetKeyDown(KeyCode.B))
+        {
+            testAbility.InvokeMethod("ChangeColor", new object[] { 2 });
+        }
+        else if (Input.GetKeyDown(KeyCode.Y))
+        {
+            testAbility.InvokeMethod("ChangeColor", new object[] { 3 });
+        }
+        else if (Input.GetKeyDown(KeyCode.W))
+        {
+            testAbility.InvokeMethod("ChangeColor", new object[] { 4 });
+        }
+        else if (Input.GetKeyDown(KeyCode.M))
+        {
+            testAbility.InvokeMethod("ChangeColor", new object[] { 5 });
+        }
+        else if (Input.GetKeyDown(KeyCode.X))
+        {
+            testAbility.InvokeMethod("ChangeColor", new object[] { 6 });
+        }
+        else if (Input.GetKeyDown(KeyCode.T))
+        {
+            testAbility2.InvokeMethod("TeleportToRandomLocationWithinRadius", new object[] { 5 });
         }
     }
     // Update is called once per frame

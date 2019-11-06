@@ -68,10 +68,9 @@ namespace HalkoNetworking
             string hostName = Dns.GetHostName();
             string ip = Dns.GetHostAddresses(hostName)[1].ToString();
 
-            if (ip.ToString() != "192.168.0.157")
-            {
-                ip = "192.168.0.157";
-            }
+            if (ip != "192.168.0.157")
+                ip = "192.168.43.176";
+
             Connect(ip, 27015);
         }
 
@@ -176,6 +175,8 @@ namespace HalkoNetworking
                 byte[] buf = { (byte)'l' };
                 stream.Write(buf, 0, 1);
 
+                Receive('c');
+                /*
                 byte[] callback = new byte[1];
                 //Read a callback from the server.
                 stream.Read(callback, 0, 1);
@@ -184,7 +185,7 @@ namespace HalkoNetworking
                 {
                     _OnLeftRoom();
                 }
-                
+                */
             }
             else
             {
@@ -235,6 +236,18 @@ namespace HalkoNetworking
             }
             
             return rooms;
+        }
+
+        public void DisconnectFromHalko()
+        {
+            //Create the byte-arrays to be sent to the server
+            byte[] strmLength = new byte[] { 1, 0, 0, 0};
+            byte[] strm = new byte[] { (byte)'d' };
+            //Send the arrays
+            stream.Write(strmLength, 0, 4);
+            stream.Write(strm, 0, 1);
+            //Wait for a callback
+            Receive('c');
         }
 
         //Adds a HalkoClass to the halkoClasses-list and returns its index.
@@ -326,7 +339,7 @@ namespace HalkoNetworking
                             KeyValuePair<int, object[]> method = f.DeSerializeMethod(data);
                             print("Jeesi");
                             HalkoClass classWithMethod = halkoClasses[(int)classIndex];
-                            classWithMethod.halkoMethodHandler.methodsWaitingForInvoke.Add(method);
+                            classWithMethod.methodsWaitingForInvoke.Add(method);
                         }
                         //If the received stream holds information, that a new client has connected to the room.
                         else if (streamflag == "n")
@@ -378,6 +391,10 @@ namespace HalkoNetworking
                 {
                     _OnJoinedRoom(BitConverter.ToUInt32(data, 1));
                 }
+                else if (streamflag == "l")
+                {
+                    _OnLeftRoom();
+                }
                 //If the client has connected to the server.
                 else if(streamflag == "s")
                 {
@@ -397,6 +414,10 @@ namespace HalkoNetworking
                     {
                         _OnCreateRoomFailed(Encoding.ASCII.GetString(data, 2, (int)dataLength - 2));
                     }
+                }
+                else if(streamflag == "d")
+                {
+                    _OnDisconnectedFromHalko();
                 }
             }
         }
@@ -531,36 +552,31 @@ namespace HalkoNetworking
             OnJoinRoomFailed(msg);
         }
 
+        private void _OnDisconnectedFromHalko()
+        {
+            print("Disconnected from server.");
+            stream.Close();
+            client.Close();
+            OnDisconnectedFromHalko();
+        }
+
         //Virtual methods:
 
-        public virtual void OnFailedToConnectToHalko()
-        {
-        }
+        public virtual void OnFailedToConnectToHalko(){}
 
-        public virtual void OnConnectedToHalko()
-        {
-        }
+        public virtual void OnConnectedToHalko(){}
 
-        public virtual void OnCreatedRoom()
-        {
-        }
+        public virtual void OnCreatedRoom(){}
 
-        public virtual void OnCreateRoomFailed(string msg)
-        {
-        }
+        public virtual void OnCreateRoomFailed(string msg){}
 
-        public virtual void OnJoinedRoom()
-        {
-        }
+        public virtual void OnJoinedRoom(){}
 
-        public virtual void OnJoinRoomFailed(string msg)
-        {
-        }
+        public virtual void OnJoinRoomFailed(string msg){}
 
-        public virtual void OnLeftRoom()
-        {
+        public virtual void OnLeftRoom(){}
 
-        }
+        public virtual void OnDisconnectedFromHalko(){}
     }
 
 }

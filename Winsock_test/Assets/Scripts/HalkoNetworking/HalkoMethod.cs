@@ -10,14 +10,13 @@ namespace HalkoNetworking.RemoteMethod
     public class HalkoMethod : Attribute
     {
     }
+
     public class HalkoClass : MonoBehaviour
     {
-        //Public fields: 
-        public HalkoMethodHandler halkoMethodHandler;
-
         //Private fields:
         private int classIndex;
         private List<KeyValuePair<string, MethodInfo>> halkoMethods;
+        public List<KeyValuePair<int, object[]>> methodsWaitingForInvoke;
         private NetworkStream stream;
         private HalkoNetwork halkoNetwork;
         private HalkoAttributeHandler ah;
@@ -33,14 +32,27 @@ namespace HalkoNetworking.RemoteMethod
             {
                 Debug.Log("No HalkoNetwork-object found in the scene. " + e.Message);
             }
-
-            halkoMethodHandler = this.gameObject.AddComponent<HalkoMethodHandler>();
-            halkoMethodHandler.parentClass = this;
+            methodsWaitingForInvoke = new List<KeyValuePair<int, object[]>>();
             classIndex = halkoNetwork.AddHalkoClass(this);
             stream = halkoNetwork.Client.GetStream();
             formatter = new Formatter();
             GetHalkoMethods();
         }
+
+        // Update is called once per frame
+        void Update()
+        {
+            if (methodsWaitingForInvoke.Count > 0)
+            {
+                for (int i = 0; i < methodsWaitingForInvoke.Count; i++)
+                {
+                    KeyValuePair<int, object[]> method = methodsWaitingForInvoke[i];
+                    InvokeRemoteMethod(method.Key, method.Value);
+                }
+                methodsWaitingForInvoke.Clear();
+            }
+        }
+
         //Public methods:
 
         /// <summary>
@@ -75,7 +87,7 @@ namespace HalkoNetworking.RemoteMethod
 
         //Adds the index and parameters of the method, that needs to be invoked
         //to a list.
-        public void InvokeRemoteMethod(int methodIndex, object[] parameters)
+        private void InvokeRemoteMethod(int methodIndex, object[] parameters)
         {
             halkoMethods[methodIndex].Value.Invoke(this, parameters);
         }
@@ -91,6 +103,7 @@ namespace HalkoNetworking.RemoteMethod
             {
                 halkoMethods.Add(new KeyValuePair<string, MethodInfo>(tempMethods[i].Name, tempMethods[i]));
             }
+            print("HalkoClass " + classIndex + " halkoMethods count: " + halkoMethods.Count);
         }
     }
 }

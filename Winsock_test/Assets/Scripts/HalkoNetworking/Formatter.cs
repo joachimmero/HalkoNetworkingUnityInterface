@@ -16,7 +16,7 @@ namespace HalkoNetworking
             byte[] arr = new byte[size + 9];
 
             //Get the length of the stream "arr" in uints and convert it to bytes.
-            byte[] streamLength = BitConverter.GetBytes((uint)arr.Length);
+            byte[] streamLength = BitConverter.GetBytes((uint)arr.Length - (uint)4);
 
             //Add the size of the stream to the first four indexes of arr.
             arr[0] = streamLength[0];

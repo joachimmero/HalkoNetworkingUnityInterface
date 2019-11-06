@@ -13,7 +13,7 @@ public struct Room
     {
         roomName = name;
         playerCount = players;
-        //TEMP: Muuta tämä paremman nimiseksi!
+
         this.maxPlayers = maxPlayers;
     }
 }

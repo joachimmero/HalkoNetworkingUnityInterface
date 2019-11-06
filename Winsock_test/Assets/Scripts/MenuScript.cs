@@ -14,6 +14,7 @@ public class MenuScript : MonoBehaviour
     [SerializeField] Button joinRoomBtn;
     [SerializeField] Button FetchRoomsBtn;
     [SerializeField] Button leaveRoomBtn;
+    [SerializeField] Button disconnectBtn;
 
     [Header("Input Fields")]
     [SerializeField] InputField playerNameField;
@@ -43,7 +44,7 @@ public class MenuScript : MonoBehaviour
         joinRoomBtn.onClick.AddListener(() => JoinRoomBtnClicked());
         FetchRoomsBtn.onClick.AddListener(() => FetchRooms());
         leaveRoomBtn.onClick.AddListener(() => LeaveRoomBtnClicked());
-
+        disconnectBtn.onClick.AddListener(() => DisconnectBtnClicked());
     }
 
     //Public methods:
@@ -87,7 +88,12 @@ public class MenuScript : MonoBehaviour
         print("clicked");
         myNetworking.LeaveRoom();
     }
-    
+
+    private void DisconnectBtnClicked()
+    {
+        myNetworking.DisconnectFromHalko();
+    }
+
     private void FetchRooms()
     {
         List<Room> rooms = myNetworking.GetRooms();
